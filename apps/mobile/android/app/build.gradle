@@ -1,0 +1,68 @@
+apply plugin: 'com.android.application'
+
+// One version, from the root package.json — the same rule the extension
+// manifests live under (assemble.mjs aborts on drift). A hand-written version
+// string here is a store upload that claims to be something it is not.
+import groovy.json.JsonSlurper
+def rootPkg = new JsonSlurper().parse(file("../../../../package.json"))
+def semver = (rootPkg.version =~ /^(\d+)\.(\d+)\.(\d+)/)
+if (!semver.find()) {
+    throw new GradleException("root package.json version is not semver: ${rootPkg.version}")
+}
+def (vMajor, vMinor, vPatch) = [1, 2, 3].collect { semver.group(it) as int }
+
+android {
+    namespace = "xyz.radbro.radwallet"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "xyz.radbro.radwallet"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        // monotonic and derived: 0.10.0 -> 1000. Play refuses a versionCode that
+        // does not increase, so it cannot be left to a human to remember.
+        versionCode vMajor * 10000 + vMinor * 100 + vPatch
+        versionName rootPkg.version
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    // BiometricPrompt: the only way to make a Keystore key that the OS refuses
+    // to use until a finger or a face has been presented
+    implementation "androidx.biometric:biometric:$androidxBiometricVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// Capacitor scaffolds a block here that applies the Google Services plugin the
+// moment a google-services.json appears in this directory, for push
+// notifications. This wallet has no push and no server to send one, and a
+// build step that turns Google's SDK on by itself when a file shows up is the
+// opposite of a receipt you can check. Removed, along with its classpath in the
+// root build.gradle. lint:android fails the build if either comes back.

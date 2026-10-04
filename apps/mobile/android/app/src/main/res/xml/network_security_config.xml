@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The same rule the RPC pool editor enforces in normalizeEndpoint: TLS to
+  anywhere, plain http to LOOPBACK only.
+
+  Plaintext to a remote host hands every address you look up to whoever is on
+  the path. A node on the phone itself never leaves the phone, and is the best
+  endpoint on the list — refusing it would be refusing the good case.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>

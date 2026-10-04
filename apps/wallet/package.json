@@ -1,0 +1,25 @@
+{
+  "name": "@radwallet/wallet",
+  "version": "0.10.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && vite build --mode singlefile && vite build --mode pages && vite build --mode pages-demo && vite build --mode background",
+    "build:mobile": "vite build --mode android"
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/preferences": "^8.0.1",
+    "@preact/signals": "^1.3.0",
+    "@radwallet/core": "*",
+    "preact": "^10.24.0",
+    "qrcode-generator": "^1.5.0"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.9.0",
+    "typescript": "^5.6.0",
+    "vite": "^6.4.3",
+    "vite-plugin-singlefile": "^2.0.0"
+  }
+}

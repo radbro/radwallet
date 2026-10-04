@@ -1,0 +1,21 @@
+{
+  "name": "@radwallet/mobile",
+  "version": "0.10.0",
+  "private": true,
+  "scripts": {
+    "sync": "npm -w @radwallet/wallet run build:mobile && cap sync android",
+    "build": "npm -w @radwallet/mobile run sync && JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home} ./android/gradlew -p android assembleDebug",
+    "release": "npm -w @radwallet/mobile run sync && JAVA_HOME=${JAVA_HOME:-/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home} ./android/gradlew -p android assembleRelease",
+    "open": "cap open android",
+    "emulator": "${ANDROID_HOME:-/opt/homebrew/share/android-commandlinetools}/emulator/emulator -avd radwallet-test -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/preferences": "^8.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.4.2"
+  }
+}

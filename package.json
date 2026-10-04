@@ -1,0 +1,39 @@
+{
+  "name": "radwallet",
+  "version": "0.10.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "test": "npm -w @radwallet/core run test && npm run test:swap && npm run test:clipboard && npm run test:addressbook && npm run test:wallet-list && npm run test:provider && npm run test:portfolio",
+    "test:wallet-list": "tsx --test apps/wallet/test/wallet-list.test.ts",
+    "test:addressbook": "tsx --test apps/wallet/test/addressbook.test.ts",
+    "e2e:addressbook": "npm run build && node scripts/e2e/addressbook.e2e.cjs",
+    "test:clipboard": "tsx --test apps/wallet/test/secret-clipboard.test.ts",
+    "test:swap": "tsx --test apps/wallet/test/tokenpick.test.ts apps/wallet/test/swaptrack.test.ts",
+    "e2e:swap": "npm run build && node scripts/e2e/swap.e2e.cjs && node scripts/e2e/swap-confirmation.e2e.cjs",
+    "build": "npm -w @radwallet/wallet run build && node apps/extension/assemble.mjs --all",
+    "dev": "npm -w @radwallet/wallet run dev",
+    "e2e": "npm run build && node scripts/e2e/pwa.e2e.cjs && node scripts/e2e/wallet-management.e2e.cjs && node scripts/e2e/wallet-list.e2e.cjs",
+    "e2e:wallet-list": "npm run build && node scripts/e2e/wallet-list.e2e.cjs",
+    "e2e:ext": "npm run build && node scripts/e2e/addressbook.e2e.cjs && node scripts/e2e/settings.e2e.cjs && node scripts/e2e/amounts.e2e.mjs && node scripts/e2e/nfts.e2e.mjs && node scripts/e2e/allowance.e2e.cjs && node scripts/e2e/swap.e2e.cjs && node scripts/e2e/swap-confirmation.e2e.cjs && node scripts/e2e/extension.e2e.cjs && node scripts/e2e/chains.e2e.cjs",
+    "e2e:settings": "npm run build && node scripts/e2e/settings.e2e.cjs",
+    "e2e:firefox": "npm run build && node scripts/e2e/firefox.e2e.cjs",
+    "e2e:anvil": "npm run build && node scripts/e2e/anvil.e2e.cjs",
+    "e2e:custom-network": "npm run build && node scripts/e2e/custom-network.e2e.cjs",
+    "e2e:android": "npm run build:android && node scripts/e2e/android.e2e.cjs",
+    "lint:firefox": "node scripts/lint-firefox.mjs",
+    "lint:android": "node scripts/lint-android.mjs",
+    "tokens": "node scripts/gen-tokens.mjs",
+    "package": "node scripts/package-extension.mjs",
+    "build:android": "npm -w @radwallet/mobile run build",
+    "lint:source": "node scripts/check-source.mjs",
+    "test:provider": "tsx --test apps/wallet/test/provider-refusal.test.ts",
+    "test:portfolio": "tsx --test apps/wallet/test/portfolio-state.test.ts"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.62.1"
+  }
+}

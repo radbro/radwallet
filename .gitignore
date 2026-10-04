@@ -1,0 +1,16 @@
+node_modules/
+apps/wallet/dist/
+apps/wallet/dist-demo/
+apps/wallet/dist-mobile/
+apps/extension/dist/
+apps/extension/dist-firefox/
+apps/wallet/dist-bg/
+release/
+
+# The global ignore file excludes .claude/, but CLAUDE.md includes
+# @.claude/mastery.md — so this one file has to stay tracked, or `git add -A`
+# silently stages it as deleted and the include dangles for everyone else.
+!.claude/
+!.claude/mastery.md
+apps/mobile/android/local.properties
+apps/mobile/android/app/src/main/assets/public/

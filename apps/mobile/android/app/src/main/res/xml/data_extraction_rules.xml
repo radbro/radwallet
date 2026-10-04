@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nothing leaves the device — not to Google Drive, and not through a
+  phone-to-phone transfer.
+
+  `allowBackup="false"` alone is not the whole story on API 31+: device-to-
+  device transfer is a separate channel with its own rules. The vault is
+  ciphertext either way, but vault.ts says the vault never leaves the device,
+  and a copy sitting in someone's cloud backup would make that a lie.
+
+  The cost is real and deliberate: moving to a new phone does NOT bring the
+  wallet across. You restore from the seed phrase, which is the backup this
+  wallet refuses to let you skip.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="file" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>

@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "RADWALLET — the Radbro Privacy Wallet",
+  "short_name": "RADWALLET",
+  "version": "0.10.0",
+  "description": "The best and only wallet on the World Wide Web. No accounts. No tracking. No fees. Just check the chain.",
+  "icons": {
+    "192": "icons/icon-192.png",
+    "512": "icons/icon-512.png"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "RADWALLET"
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "index.html?panel=1" },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    { "resources": ["inpage.js"], "matches": ["http://*/*", "https://*/*"] }
+  ],
+  "permissions": ["storage", "alarms", "notifications", "proxy", "sidePanel"]
+}

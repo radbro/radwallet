@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RADWALLET</string>
+    <string name="title_activity_main">RADWALLET</string>
+    <string name="package_name">xyz.radbro.radwallet</string>
+    <string name="custom_url_scheme">xyz.radbro.radwallet</string>
+</resources>

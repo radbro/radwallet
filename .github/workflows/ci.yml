@@ -1,0 +1,114 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: unit tests (core and swap UI boundaries)
+        run: npm test
+      - name: typecheck (wallet ui)
+        run: npx tsc -p apps/wallet/tsconfig.json
+      - name: build all targets
+        run: npm run build
+      - name: cross-browser lint (chrome + firefox artifacts)
+        run: npm run lint:firefox
+      - name: android shell lint (manifest promises, permissions, no telemetry)
+        # source-only, so it needs no Android SDK on the runner. The APK is
+        # where the wallet's promises are easiest to break by accident: backup
+        # is on by default, and WebView metrics and Safe Browsing both report to
+        # Google without a single fetch( appearing in src/.
+        run: npm run lint:android
+      - name: verify source inventory
+        run: npm run lint:source
+      - name: reproducible packaging — rebuild must produce identical artifacts
+        run: |
+          # SHASUMS lists every zip and every file inside it, for both store
+          # targets. Comparing the whole file is
+          # stricter than one zip hash, and needs no sha256sum (which does not
+          # exist on macOS).
+          npm run package
+          cp release/SHASUMS /tmp/SHASUMS.1
+          npm run build
+          npm run package
+          diff -u /tmp/SHASUMS.1 release/SHASUMS
+          echo "deterministic:"
+          grep '\.zip$' release/SHASUMS
+      - name: no-telemetry receipt — documented opt-in exceptions only
+        run: |
+          # The wallet talks to RPC endpoints and nothing else. There are FOUR
+          # documented exceptions, all off until the user asks:
+          #   indexer.ts   — full asset discovery (warns what it leaks)
+          #   media.ts     — NFT artwork, which lives behind tokenURI
+          #   pricefeed.ts — price HISTORY; public RPCs serve <1 day of archive
+          #   aggregator.ts — KyberSwap quotes; pair, amount, address and IP
+          # Anything else that reaches the network fails the build.
+          STRAY=$(grep -RInE "fetch\(['\"]https?://" apps/wallet/src packages/core/src \
+            | grep -v "ethereum-rpc" \
+            | grep -v "^packages/core/src/indexer.ts:" \
+            | grep -v "^packages/core/src/media.ts:" \
+            | grep -v "^packages/core/src/aggregator.ts:" \
+            | grep -v "^packages/core/src/pricefeed.ts:" || true)
+          if [ -n "$STRAY" ]; then echo "unexpected network call:"; echo "$STRAY"; exit 1; fi
+          # and the exception has to stay opt-in. indexer.ts now speaks to
+          # several providers, so the gate is two properties rather than a list
+          # of function names that can quietly grow:
+          #   1. every request goes through ONE fetch call, and
+          #   2. the entry point above it bails out when the user has not opted in.
+          FETCHES=$(grep -c "fetch(" packages/core/src/indexer.ts)
+          if [ "$FETCHES" != "1" ]; then
+            echo "indexer.ts has $FETCHES fetch calls; it must have exactly one chokepoint"
+            grep -n "fetch(" packages/core/src/indexer.ts
+            exit 1
+          fi
+          grep -A8 "export async function discoverAssets" packages/core/src/indexer.ts \
+            | grep -q "if (!cfg.enabled) return" \
+            || (echo "discoverAssets does not check cfg.enabled first" && exit 1)
+          # nothing else in the file may reach the network on its own
+          grep -q "return (await discoverAssets(" packages/core/src/indexer.ts \
+            || (echo "discoverCollections must delegate to discoverAssets" && exit 1)
+          grep -A8 "export async function resolveArt" packages/core/src/media.ts \
+            | grep -q "if (!gate.allowed) return" \
+            || (echo "resolveArt does not check gate.allowed first" && exit 1)
+          grep -A8 "export async function fetchChart" packages/core/src/pricefeed.ts \
+            | grep -q "if (!cfg.enabled) return" \
+            || (echo "fetchChart does not check cfg.enabled first" && exit 1)
+          FETCHES=$(grep -c "fetch(" packages/core/src/aggregator.ts)
+          if [ "$FETCHES" != "1" ]; then
+            echo "aggregator.ts has $FETCHES fetch calls; it must have exactly one chokepoint"
+            grep -n "fetch(" packages/core/src/aggregator.ts
+            exit 1
+          fi
+          grep -A8 "async function kyberFetch" packages/core/src/aggregator.ts \
+            | grep -q "if (!cfg.enabled) return" \
+            || (echo "kyberFetch does not check cfg.enabled first" && exit 1)
+          # An IFRAME is a network call the grep above cannot see, and a worse
+          # one: it runs a third party's code inside the wallet rather than
+          # answering a question we asked. Exactly one may exist, it must be the
+          # DEX chart, and its src must come from the builder that knows which
+          # hosts are allowed — never an interpolated URL at the call site.
+          FRAMES=$(grep -rIl "<iframe" apps/wallet/src apps/extension/static || true)
+          if [ "$FRAMES" != "apps/wallet/src/screens/asset.tsx" ]; then
+            echo "unexpected iframe — only the opt-in DEX chart may embed anyone:"
+            echo "$FRAMES"
+            exit 1
+          fi
+          grep -A6 "<iframe" apps/wallet/src/screens/asset.tsx | grep -q "src={dexChartUrl(" \
+            || (echo "the chart iframe must take its src from dexChartUrl()" && exit 1)
+          grep -A6 "<iframe" apps/wallet/src/screens/asset.tsx | grep -q 'sandbox=' \
+            || (echo "the chart iframe must be sandboxed" && exit 1)
+          # and the URL builder itself must never reach the network
+          if grep -q "fetch(" packages/core/src/dexchart.ts; then
+            echo "dexchart.ts builds URLs; it must not fetch"; exit 1
+          fi
+          echo "no stray network calls; all four fetch exceptions are opt-in-gated"

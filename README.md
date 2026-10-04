@@ -1,41 +1,80 @@
 # RADWALLET
 
-RADWALLET is a privacy-first EVM wallet. It uses the visual style of the
-[Radbro Webring](https://radbro.xyz/). It has no telemetry, wallet server,
-or added wallet swap fee. Network gas and venue fees still apply.
+**FINALLY A RAD WALLET.**
 
-This is a public source alpha. An independent security audit has not been
-completed. Source publication does not approve a store release. Read
-[SECURITY.md](SECURITY.md) and [STORE.md](STORE.md).
+A privacy-first EVM wallet from the [Radbro Webring](https://radbro.xyz/).
+Your keys. Your RPC. Your business.
+
+No telemetry. No wallet server. No added wallet swap fee.
+Network gas and venue fees still apply.
+
+> [!WARNING]
+> **No independent security audit has been completed. Use RADWALLET at your own risk.**
+>
+> **Do not use RADWALLET to hold a significant amount of funds until an independent
+> security audit has passed and its findings have been resolved.**
+>
+> This is a public source alpha. Defects can expose keys or cause permanent loss
+> of funds. Use test wallets and small amounts while evaluating it.
+
+Read [SECURITY.md](SECURITY.md) for reporting and security limits.
+Browser-store submission requires the review in [STORE.md](STORE.md).
+
+[Features](#features) · [Install](#install) · [Build from source](#build-from-source) ·
+[Privacy](#privacy-and-signing) · [Limits](#current-limits) · [Development](#development)
 
 ## Features
 
+### Wallets and assets
+
 - Keep multiple seed phrases and imported keys in one encrypted vault.
-- Name wallets and apply labels inside the encrypted vault.
+- Save wallet names and labels inside the encrypted vault.
+- View tokens, NFTs, portfolio balances, contacts, and local history.
+
+### Transactions and dapps
+
 - Send and receive with ENS names and QR codes.
-- Check tokens, NFTs, portfolio balances, contacts, and local history.
-- Replace pending transactions to speed them up or cancel them.
+- Speed up or cancel pending transactions through replacement.
+- Connect dapps through the Chrome and Firefox provider.
+- Review simulations before signing transactions.
+- Bound unlimited token allowances by default.
+
+### Networks and browser support
+
 - Use Ethereum, Base, Arbitrum, Robinhood, testnets, and custom networks.
 - Edit RPC pools or connect to a node on your computer.
-- Connect dapps through the Chrome and Firefox provider.
-- Review transaction simulations and bounded token allowances before signing.
 - Use the Chrome side panel or Firefox sidebar.
 
-Public-beta features include RADSWAP, ERC-5564 stealth addresses, desktop
-extension Tor routing, the PWA, and the Android shell. RADSWAP compares v3
-routes, the house v4 route, and ordinary single-wallet Pons V2 curve swaps.
-KyberSwap quotes are optional. Indexers, NFT artwork, price history, and
-embedded charts require explicit consent.
+### Public-beta features
 
-Android has emulator coverage. Physical-device and biometric acceptance
-remain open. No automated APK release is provided.
+| Feature | Scope |
+|---|---|
+| RADSWAP | Compares v3 routes, the house v4 route, and single-wallet Pons V2 curve swaps. KyberSwap quotes are optional. |
+| Stealth addresses | ERC-5564 receiving with fresh addresses. Transactions and announcements remain public. |
+| Tor routing | Desktop extensions can use a local SOCKS5 service for approved RPC hosts. |
+| Optional data services | Indexers, NFT artwork, price history, and embedded charts require explicit consent. |
+| PWA and Android | Web wallet and Android source. See the limits below. |
 
-Helios, WalletConnect, hardware wallets, iOS, and encrypted vault export are
-not implemented. Firefox for Android has not been tested.
+## Install
 
-## Build and install
+Get the Chrome or Firefox ZIP from the
+[alpha release](https://github.com/radbro/radwallet/releases/tag/v0.10.0-alpha.1).
+Compare its SHA-256 hash with the published `SHASUMS`. Extract the ZIP.
 
-Use Node 22.
+| Browser | Installation |
+|---|---|
+| Chrome | Open `chrome://extensions`. Enable **Developer mode**. Select **Load unpacked**. Select the extracted folder. |
+| Firefox | Open `about:debugging#/runtime/this-firefox`. Select **Load Temporary Add-on**. Select the extracted `manifest.json`. |
+
+Firefox installation is temporary. The release does not include a signed XPI.
+Neither package is an approved browser-store release.
+
+Select **DOCK** to keep the wallet beside a page.
+Select **UNDOCK** to return to the popup.
+
+## Build from source
+
+Use Node 22. Clone this repository and open its directory.
 
 ```bash
 npm ci
@@ -57,21 +96,9 @@ npm run package
 | `docs/` and `docs/demo/` | Committed GitHub Pages artifacts |
 | `release/` | Two deterministic extension ZIPs and `SHASUMS` |
 
-In Chrome, open `chrome://extensions`. Enable Developer mode. Select
-**Load unpacked**. Select `apps/extension/dist`.
-
-In Firefox, open `about:debugging#/runtime/this-firefox`. Select
-**Load Temporary Add-on**. Select
-`apps/extension/dist-firefox/manifest.json`. This installation is temporary.
-A signed Firefox XPI is not part of this source release.
-
-Select **DOCK** to keep the wallet open beside a page. Select **UNDOCK** to
-return to the popup. Both browsers use the same wallet logic. The build derives
-the Firefox manifest from the Chrome manifest.
-
-Use `npm run dev` for local UI work. The demo uses fixture data. The normal
-wallet build uses live RPC data. To test the PWA, serve `apps/wallet/dist`
-and use the browser's install action.
+Follow the browser instructions above with the matching extension output.
+For the PWA, serve `apps/wallet/dist` and use the browser's install action.
+The demo uses fixture chain data. The normal wallet uses live RPC data.
 
 ## Privacy and signing
 
@@ -93,23 +120,36 @@ Transactions require a preview before signing. Unlimited ERC-20 allowances
 are rewritten to a bounded amount by default. Users can inspect and change
 the limit. A signer refuses a request for an address outside its authority.
 
-## Distribution
+## Current limits
 
-The source release includes Chrome and Firefox ZIPs with SHA-256 hashes.
-`npm run package` creates `radwallet-<version>.zip`,
-`radwallet-<version>-firefox.zip`, and `SHASUMS`. CI rebuilds the packages and
-compares their hashes.
+- The independent security audit remains open.
+- Android has emulator coverage. Physical-device and biometric acceptance remain open.
+- Firefox for Android has not been tested.
+- Helios, WalletConnect, hardware wallets, iOS, and encrypted vault export are not implemented.
+- No signed Firefox XPI or automated APK release is provided.
+
+## Development
+
+Use `npm run dev` for local UI work. Read [CLAUDE.md](CLAUDE.md) for architecture
+and invariants. Read [design/WALLET_DESIGN.md](design/WALLET_DESIGN.md) for
+interface guidance.
 
 `source-files.json` lists the reviewed public files and their SHA-256 hashes.
 `npm run lint:source` checks paths and content against that inventory. Review
 changes before updating it. The inventory file itself requires review because
-it cannot contain its own hash. Security review remains required.
+it cannot contain its own hash.
+
+### Distribution
+
+`npm run package` creates the Chrome ZIP, Firefox ZIP, and `SHASUMS`.
+The CI workflow rebuilds the packages and compares their hashes.
+Reproducible hashes establish package correspondence. They do not establish safety.
 
 GitHub Pages can host the PWA and demo. The Android shell is available as
 source with manual build instructions. Browser-store submission requires the
 independent security review described in [STORE.md](STORE.md).
 
-## Repository map
+### Repository map
 
 | Path | Contents |
 |---|---|
@@ -119,9 +159,6 @@ independent security review described in [STORE.md](STORE.md).
 | `apps/mobile` | Capacitor Android shell |
 | `design` | Product guidance, mockup, and screenshots |
 | `research` | Integration notes and visual research |
-
-Read [CLAUDE.md](CLAUDE.md) for architecture and invariants. Read
-[design/WALLET_DESIGN.md](design/WALLET_DESIGN.md) for interface guidance.
 
 ## License
 

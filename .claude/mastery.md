@@ -14,6 +14,11 @@ and third-party behavior before changing an integration.
 - Browser restart clears memory-only session storage.
 - A recovered session can sign while vault mutation requires a fresh unlock.
 - A locked session response must return the UI to unlock.
+- Every page starts on the loading screen. Preact paints the first render
+  before `boot` reads storage. A WELCOME first render tells a vault owner to
+  create a wallet.
+- A boot failure stays on the loading screen with its reason. Never fall
+  through to WELCOME, which offers a new wallet over an existing vault.
 
 ## Browser behavior
 

@@ -254,7 +254,7 @@ async function attach() {
   await sleep(1500);
   page = await attach();
   // boot() reads the vault out of storage asynchronously, so the first paint is
-  // still the welcome screen — wait for the app to settle before judging it
+  // the loading screen — wait for the app to settle before judging it
   await page.waitForText('Locked', 30000).catch(() => {});
   const afterKill = await page.text();
   const locked = afterKill.includes('Locked') || afterKill.includes('locked');

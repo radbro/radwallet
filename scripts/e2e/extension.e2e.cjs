@@ -103,6 +103,19 @@ async function stopExtensionWorker(ctx, pg, extId) {
   assert(preLogs.startsWith('ERR:4100:'), `pre-connect eth_getLogs was not blocked: ${preLogs}`);
   console.log('1a. PRE-CONNECT RPC: discovery works, eth_getLogs blocked with 4100');
 
+  // An approval window boots while it waits on the background. It used to
+  // render WELCOME ("make a new wallet") until the session answered, which
+  // told a user with a wallet that they had none. Record every render of
+  // every page opened from here on, before any page script runs.
+  await ctx.addInitScript(() => {
+    window.__welcomeRendered = false;
+    window.__loadingRendered = false;
+    new MutationObserver(() => {
+      if (document.querySelector('.booting')) window.__loadingRendered = true;
+      if ((document.body?.textContent ?? '').includes('MAKE A NEW WALLET')) window.__welcomeRendered = true;
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
+
   // 2. connect — session was adopted at creation, so NO unlock inside approval
   let approvalP = ctx.waitForEvent('page', { timeout: 20000 });
   const acctsP = dapp.evaluate(() => window.ethereum.request({ method: 'eth_requestAccounts' }));
@@ -110,6 +123,12 @@ async function stopExtensionWorker(ctx, pg, extId) {
   await ap.waitForSelector('text=SITE WANTS TO SEE YOU', { timeout: 20000 });
   const unlockShown = await ap.isVisible('text=Locked');
   console.log('2. CONNECT APPROVAL, no unlock needed:', !unlockShown);
+  const approvalBoot = await ap.evaluate(() => ({
+    welcome: window.__welcomeRendered, loading: window.__loadingRendered,
+  }));
+  assert(approvalBoot.loading === true && approvalBoot.welcome === false,
+    `approval window boot rendered ${JSON.stringify(approvalBoot)} — WELCOME must never show over a vault`);
+  console.log('2-. APPROVAL WINDOW BOOT: loading state, never WELCOME:', JSON.stringify(approvalBoot));
   await ap.click('button:has-text("CONNECT")');
   const accts = await acctsP;
   const addr = accts[0];

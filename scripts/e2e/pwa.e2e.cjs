@@ -1148,8 +1148,27 @@ function assertNoHorizontalScroll(layout, label) {
     await dialog.locator('.portfolio-check input').first().uncheck();
   });
   await portfolio.assertPortfolioEmptyFilterAndReset(page, 'PWA portfolio');
+  // A page that already holds a vault must never show WELCOME while it boots.
+  // The first render used to be WELCOME until storage and the session
+  // answered, so a slow approval window told the user they had no wallet.
+  // The observer runs before any page script and records every render.
+  await page.addInitScript(() => {
+    window.__welcomeRendered = false;
+    window.__loadingRendered = false;
+    new MutationObserver(() => {
+      if (document.querySelector('.booting')) window.__loadingRendered = true;
+      if ((document.body?.textContent ?? '').includes('MAKE A NEW WALLET')) window.__welcomeRendered = true;
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
   await page.reload();
   await page.waitForTimeout(600);
+  const bootRenders = await page.evaluate(() => ({
+    welcome: window.__welcomeRendered, loading: window.__loadingRendered,
+  }));
+  console.log('BOOT NEVER SHOWS WELCOME OVER A VAULT:', JSON.stringify(bootRenders));
+  if (bootRenders.welcome || !bootRenders.loading) {
+    throw new Error(`boot rendered ${bootRenders.welcome ? 'WELCOME' : 'no loading state'} with a vault present`);
+  }
   if (await page.locator('text=Locked').count()) {
     await page.fill('input[placeholder="password"]', PASSWORD);
     await page.press('input[placeholder="password"]', 'Enter');

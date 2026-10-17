@@ -1,7 +1,7 @@
 import { useState } from 'preact/hooks';
 import {
   screen, createWallet, importWallet, importKeyAsWallet, unlock, say, DEMO, sayError,
-  bioSealed, bioReady, unlockWithBiometrics,
+  bioSealed, bioReady, unlockWithBiometrics, bootFailed,
 } from '../state.js';
 import { LOGO } from '../assets.js';
 import { useScreenGuard } from '../bits.js';
@@ -9,6 +9,37 @@ import { FooterRing } from '../bits.js';
 
 const MIN_VAULT_PASSWORD_CHARS = 16;
 const PASSWORD_HINT = `${MIN_VAULT_PASSWORD_CHARS}+ characters. Use a password manager secret or a long passphrase.`;
+
+/**
+ * Every page renders this until it knows whether a vault exists. CSS keeps it
+ * blank for the first quarter second, so a fast boot shows no flash of text;
+ * a slow one (an approval window waiting on a background worker the browser
+ * put to sleep) gets the pending line, then the reason.
+ */
+export function Loading() {
+  if (bootFailed.value) {
+    return (
+      <div class="content">
+        <div class="simhead bootfail">[ WALLET DID NOT LOAD ]</div>
+        <div class="note center">
+          could not read this browser's wallet storage. nothing was changed.
+        </div>
+        <div class="note center">{bootFailed.value}</div>
+        <div style={{ padding: '14px 20px 0' }}>
+          <button class="btn block" onClick={() => location.reload()}>TRY AGAIN</button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div class="content booting" role="status">
+      <div class="simhead">[ LOADING INTENSIFIES ]<span class="bootcursor" aria-hidden="true">█</span></div>
+      <div class="note center bootslow">
+        still waking up. a wallet the browser put to sleep takes a few seconds.
+      </div>
+    </div>
+  );
+}
 
 export function Welcome() {
   return (

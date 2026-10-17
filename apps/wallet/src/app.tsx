@@ -13,7 +13,7 @@ import { onBackground } from './native.js';
 import { watchAddressBook } from './addressbook.js';
 import { Starfield, TabBar, TxLink } from './bits.js';
 import { LOGO } from './assets.js';
-import { Welcome, Create, Import, Unlock } from './screens/onboard.js';
+import { Loading, Welcome, Create, Import, Unlock } from './screens/onboard.js';
 import { Home } from './screens/home.js';
 import { Portfolio, PortfolioNavigation } from './screens/portfolio.js';
 import { SendSheet } from './screens/send.js';
@@ -30,7 +30,7 @@ import { AssetSheet } from './screens/asset.js';
 import './style.css';
 
 const SCREENS: Record<string, () => preact.JSX.Element> = {
-  welcome: Welcome, create: Create, import: Import, unlock: Unlock,
+  loading: Loading, welcome: Welcome, create: Create, import: Import, unlock: Unlock,
   home: Home, portfolio: Portfolio, swap: Swap,
   settings: Settings, approve: Approve,
   activity: Activity, nfts: Nfts,

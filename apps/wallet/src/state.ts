@@ -83,6 +83,7 @@ import {
 } from './native.js';
 
 export type Screen =
+  | 'loading'
   | 'welcome'
   | 'create'
   | 'import'
@@ -123,7 +124,15 @@ export const DEMO = import.meta.env?.VITE_DEMO === '1';
 const storage = kv;
 
 // ---- signals --------------------------------------------------------------
-export const screen = signal<Screen>('welcome');
+/**
+ * LOADING until `boot` knows whether a vault exists and whether the session
+ * is open. It used to start as WELCOME, so every page — the approval window
+ * most visibly, since it waits on a background that may be waking up — told
+ * a user who HAS a wallet to make one, until storage answered.
+ */
+export const screen = signal<Screen>('loading');
+/** why boot could not read local storage; the loading screen says so */
+export const bootFailed = signal<string | null>(null);
 export const vaultBlob = signal<VaultBlob | null>(null);
 export const accounts = signal<WalletAccount[]>([]);
 export type AddressBookEntry = AddressBookContact & { owned: boolean };
@@ -460,7 +469,7 @@ export function hush(): void {
  * so the screen goes where the truth is.
  */
 function dropToUnlock(why: string): void {
-  if (screen.value === 'unlock' || screen.value === 'welcome') return;
+  if (screen.value === 'unlock' || screen.value === 'welcome' || screen.value === 'loading') return;
   accounts.value = [];
   balances.value = [];
   assetEth.value = {};
@@ -608,7 +617,20 @@ export function revalidateSession(): Promise<void> {
 }
 
 // ---- persistence ----------------------------------------------------------
-export async function boot(): Promise<void> {
+/**
+ * Read local state, then pick the first real screen. A failure stays on the
+ * loading screen with the reason: "could not look" is not "nothing there",
+ * and falling through to WELCOME would offer a new wallet over one that
+ * exists.
+ */
+export function boot(): Promise<void> {
+  bootFailed.value = null;
+  return readStoredState().catch((e: unknown) => {
+    if (screen.value === 'loading') bootFailed.value = e instanceof Error ? e.message : String(e);
+  });
+}
+
+async function readStoredState(): Promise<void> {
 /**
  * Prefs written by an older build. The indexer used to be ONE provider with one
  * key (`{ provider, key }`); it is now a rotated list, and a stored key must

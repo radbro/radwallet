@@ -822,6 +822,16 @@ body[data-ui-scale=large] .portfolio-row-detail{padding-left:5px}
 .qr{image-rendering:pixelated; border:6px solid #fff; margin:10px auto; display:block}
 .addr{font-size:13px; color:#fff; word-break:break-all; text-align:center; margin:8px 0}
 .boot-logo{display:block; margin:22px auto 6px; width:96px}
+/* LOADING: blank for a quarter second so a fast boot never flashes text, then
+   the pending line, then (only when it is genuinely slow) the reason */
+.booting{padding-top:48px}
+.booting,.bootslow{visibility:hidden; animation:boot-reveal 0s linear .25s forwards}
+.bootslow{animation-delay:4s; margin-top:14px}
+@keyframes boot-reveal{to{visibility:visible}}
+.bootcursor{margin-left:4px; animation:boot-blink 1s steps(1) infinite}
+@keyframes boot-blink{50%{visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.bootcursor{animation:none}}
+.simhead.bootfail{color:var(--red); margin-top:48px}
 .creed{color:var(--yl); font-size:13px; text-align:center; margin:12px 8px; line-height:1.8}
 .creed b{color:#fff}
 

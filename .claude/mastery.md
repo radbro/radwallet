@@ -30,6 +30,9 @@ and third-party behavior before changing an integration.
 - JSON runtime messages cannot carry bigint values.
 - Playwright's bundled Chromium loads the extension test target.
 - A stale E2E server can hold the test port after a failed run.
+- Size Firefox test pages with `setContentViewport`, never by outer window
+  size. A sidebar takes window width without notice. An outer 390 px window
+  once left a 179 px page beside a 280 px sidebar.
 
 ## Chain reads and signing
 

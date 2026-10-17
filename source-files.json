@@ -1,7 +1,7 @@
 [
   {
     "path": ".claude/mastery.md",
-    "sha256": "49b8f81ccb9f6e44821bd2e5a37affd290faa44c5366d0b3de5f7a1aff27100c"
+    "sha256": "1d514293c4933f758026bc6b606f635423fd5d88d7c22c1fff128235849b83bb"
   },
   {
     "path": ".github/workflows/ci.yml",
@@ -1069,7 +1069,7 @@
   },
   {
     "path": "scripts/e2e/firefox.e2e.cjs",
-    "sha256": "e453a1474713e873ac1c1d7b816a6d62c7e92b070bc1edadba25d27de3731d62"
+    "sha256": "9cb9f4d8c48cd560049fbff5c9c6e972588106c10a39623a8e41b80148cc546e"
   },
   {
     "path": "scripts/e2e/fixtures/custom-assets/.gitignore",

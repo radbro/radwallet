@@ -734,7 +734,13 @@ async function gotoExtensionPage(url) {
     await clickText('Wallet', '.portfolio-nav button');
     await clickText('HOME', '.tabbar .tab');
     await waitFor(async () => (await text()).includes('RECEIVE'), 'home after portfolio checks');
-    await wd('POST', `${S()}/window/rect`, { width: 390, height: 740 }).catch(() => null);
+    // Size the CONTENT, never the outer window. Firefox opens an add-on's
+    // sidebar_action at install, and this window carries RADWALLET's own
+    // sidebar (280px in Firefox 156): an outer 390x740 left the tab 179px
+    // wide, and the wallet-drawer checks below then ran in a viewport no
+    // popup has (measured: the seed toggle wrapped to 34x353px and could not
+    // be scrolled into view).
+    await setContentViewport(390, 740);
 
     // ---- the dapp path: content script -> background -> approval window ----
     await wd('POST', `${S()}/url`, { url: `http://127.0.0.1:${DAPP_PORT}/` });
@@ -1042,6 +1048,8 @@ async function gotoExtensionPage(url) {
       });
       await wd('POST', `${S()}/moz/context`, { context: 'content' });
       await gotoExtensionPage(popup);
+      // the layout checks below assume a popup-sized page, whatever ran before
+      await setContentViewport(390, 740);
       await waitFor(async () => (await $('.portfolio-nav')) || (await $('.pwform')), 'wallet before layout checks');
       if (!(await $('.pwform'))) {
         await clickText('Wallet', '.portfolio-nav button');

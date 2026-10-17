@@ -38,10 +38,13 @@ function firefoxManifest(chromeManifest) {
   const panelPath = m.side_panel.default_path;
   delete m.side_panel;
   m.permissions = m.permissions.filter((p) => p !== 'sidePanel');
+  // Firefox opens a sidebar_action at install unless told not to; Chrome never
+  // opens its side panel by itself. Docking is the user's choice on both.
   m.sidebar_action = {
     default_panel: panelPath,
     default_title: m.short_name,
     default_icon: { 192: 'icons/icon-192.png' },
+    open_at_install: false,
   };
   // AMO needs a stable id. The floor is 140 desktop / 142 Android: that is
   // where `data_collection_permissions` landed, and a wallet has no business

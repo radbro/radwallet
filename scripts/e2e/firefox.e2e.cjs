@@ -120,9 +120,30 @@ async function saveScreenshot(name) {
   console.log('SCREENSHOT:', file);
 }
 
+/**
+ * Firefox will not make a browser window narrower than 500px (measured on
+ * 156: a 372px request came back 500), and a popup is 372px. When the window
+ * stops shrinking, the browser's own bookmarks sidebar takes the difference.
+ * This used to happen by accident: Firefox opened the WALLET's sidebar at
+ * install, until the manifest said open_at_install:false. A second running
+ * wallet page beside the one under test was never part of the plan.
+ */
+async function openSpacerSidebar() {
+  await wd('POST', `${S()}/moz/context`, { context: 'chrome' });
+  const shown = await wd('POST', `${S()}/execute/async`, {
+    script: `const done = arguments[0];
+      Promise.resolve(SidebarController.show('viewBookmarksSidebar'))
+        .then(() => done(SidebarController.currentID), (e) => done(String(e)));`,
+    args: [],
+  });
+  await wd('POST', `${S()}/moz/context`, { context: 'content' });
+  if (shown !== 'viewBookmarksSidebar') throw new Error(`could not open the spacer sidebar: ${shown}`);
+}
+
 async function setContentViewport(width, height) {
   let final = null;
-  for (let i = 0; i < 5; i++) {
+  let spacer = false;
+  for (let i = 0; i < 8; i++) {
     const rect = await wd('GET', `${S()}/window/rect`);
     const current = await wd('POST', `${S()}/execute/sync`, {
       script: `return {
@@ -135,10 +156,12 @@ async function setContentViewport(width, height) {
     const dx = width - current.width;
     const dy = height - current.height;
     if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) return current;
-    await wd('POST', `${S()}/window/rect`, {
-      width: Math.max(1, rect.width + dx),
-      height: Math.max(1, rect.height + dy),
-    });
+    const want = { width: Math.max(1, rect.width + dx), height: Math.max(1, rect.height + dy) };
+    const got = await wd('POST', `${S()}/window/rect`, want);
+    if (!spacer && got && got.width > want.width + 1) {
+      await openSpacerSidebar();
+      spacer = true;
+    }
     await sleep(200);
   }
   const current = await wd('POST', `${S()}/execute/sync`, {
@@ -606,12 +629,19 @@ async function gotoExtensionPage(url) {
       script: `const key = [...SidebarController.sidebars.keys()].find((k) => /radwallet/i.test(k));
         if (!key) return null;
         const d = SidebarController.sidebars.get(key);
-        return { key, title: d.title, extensionId: d.extensionId, menuId: d.menuId };`,
+        return { key, title: d.title, extensionId: d.extensionId, menuId: d.menuId,
+          open: SidebarController.isOpen, current: SidebarController.currentID };`,
       args: [],
     });
     await wd('POST', `${S()}/moz/context`, { context: 'content' });
     check('firefox registers the wallet as a sidebar', sidebar?.extensionId === ADDON_ID,
       sidebar ? `${sidebar.key} "${sidebar.title}"` : 'not registered');
+    // Chrome never opens its side panel at install; Firefox opens a
+    // sidebar_action unless the manifest says open_at_install:false. Docking
+    // is the user's choice, on both browsers. Nothing above clicks DOCK.
+    check('firefox does not open the wallet sidebar at install',
+      !!sidebar && !(sidebar.open && sidebar.current === sidebar.key),
+      JSON.stringify({ open: sidebar?.open, current: sidebar?.current }));
 
     // and the docked page knows it is docked
     await gotoExtensionPage(`moz-extension://${EXT_UUID}/index.html?panel=1`);
@@ -734,12 +764,11 @@ async function gotoExtensionPage(url) {
     await clickText('Wallet', '.portfolio-nav button');
     await clickText('HOME', '.tabbar .tab');
     await waitFor(async () => (await text()).includes('RECEIVE'), 'home after portfolio checks');
-    // Size the CONTENT, never the outer window. Firefox opens an add-on's
-    // sidebar_action at install, and this window carries RADWALLET's own
-    // sidebar (280px in Firefox 156): an outer 390x740 left the tab 179px
-    // wide, and the wallet-drawer checks below then ran in a viewport no
-    // popup has (measured: the seed toggle wrapped to 34x353px and could not
-    // be scrolled into view).
+    // Size the CONTENT, never the outer window: a sidebar in the window takes
+    // its width silently. An outer 390x740 once left the tab 179px wide beside
+    // a 280px sidebar, and the wallet-drawer checks below then ran in a
+    // viewport no popup has (measured: the seed toggle wrapped to 34x353px
+    // and could not be scrolled into view).
     await setContentViewport(390, 740);
 
     // ---- the dapp path: content script -> background -> approval window ----

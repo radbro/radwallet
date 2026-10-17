@@ -33,6 +33,9 @@ and third-party behavior before changing an integration.
 - Size Firefox test pages with `setContentViewport`, never by outer window
   size. A sidebar takes window width without notice. An outer 390 px window
   once left a 179 px page beside a 280 px sidebar.
+- Firefox will not size a browser window below 500 px. The suite opens the
+  bookmarks sidebar as a spacer to fit a 372 px popup page. Do not rely on
+  the wallet's own sidebar for that space.
 
 ## Chain reads and signing
 

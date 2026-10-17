@@ -68,7 +68,10 @@ The UI discards a revealed secret when its view closes.
 
 Wallet source uses extension APIs only through `src/ext.ts`. Use callback
 style. Put browser differences in that file. Docking must start during the
-user gesture. Both sidebars load `index.html?panel=1`.
+user gesture. Both sidebars load `index.html?panel=1`. Docking is the user's
+choice. Chrome never opens its side panel by itself. Firefox opens a
+`sidebar_action` at install unless the manifest sets `open_at_install: false`.
+The build sets it, and `lint:firefox` requires it.
 
 Site connections use the session API. The content script reports its own
 origin. The wallet does not need tab or host permissions to read page URLs.

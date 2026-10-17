@@ -114,6 +114,12 @@ function checkPair(pair) {
   if (!chromePanel) fail(`${tag} chrome manifest: side_panel.default_path is missing (docking)`);
   if (ffManifest.side_panel) fail(`${tag} firefox manifest: side_panel is a Chrome key, Firefox uses sidebar_action`);
   if (!ffPanel) fail(`${tag} firefox manifest: sidebar_action.default_panel is missing (docking)`);
+  // Chrome never opens its side panel at install; Firefox does unless told not to
+  if (ffManifest.sidebar_action && ffManifest.sidebar_action.open_at_install !== false) {
+    fail(`${tag} firefox manifest: sidebar_action.open_at_install must be false (Chrome never docks at install)`);
+  } else if (ffManifest.sidebar_action) {
+    pass(`${tag} firefox does not dock at install, same as chrome`);
+  }
   if (chromePanel && ffPanel && chromePanel !== ffPanel) {
     fail(`${tag} docked page differs per target: ${chromePanel} vs ${ffPanel}`);
   }

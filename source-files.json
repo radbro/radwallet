@@ -1,7 +1,7 @@
 [
   {
     "path": ".claude/mastery.md",
-    "sha256": "1d514293c4933f758026bc6b606f635423fd5d88d7c22c1fff128235849b83bb"
+    "sha256": "ea452567fda85868c3cd6e7dbb24d321c960cdc743a0db2f886d53f494e7232d"
   },
   {
     "path": ".github/workflows/ci.yml",
@@ -21,7 +21,7 @@
   },
   {
     "path": "CLAUDE.md",
-    "sha256": "4b41817c4c0acc8d75bf6985e3ad1c6cad094f205b006efca8db9c7136d023eb"
+    "sha256": "345252f550c640606d65777b12fdc4ce8d26c820b61aa9346f540fc73fa605d5"
   },
   {
     "path": "LICENSE",
@@ -45,7 +45,7 @@
   },
   {
     "path": "apps/extension/assemble.mjs",
-    "sha256": "e8eb57c5756aaef692123a98103faa541f8a8e0c586521d3b05e152de412a81d"
+    "sha256": "fec07c10a02fe82ed0123e113481fdade300773c6cfe374b7723e7c13bafb84e"
   },
   {
     "path": "apps/extension/static/content.js",
@@ -589,7 +589,7 @@
   },
   {
     "path": "design/app-shots/addressbook-firefox-send.png",
-    "sha256": "4677f9eff6e57f20229adb3847e2c1c6a5dcde902057547985bfc74d41d4f3cf"
+    "sha256": "b14693a3655a93a0086e05090d73089f9033770c47ca3632e0b66a2ed11a8e9a"
   },
   {
     "path": "design/app-shots/addressbook-long-label.png",
@@ -1069,7 +1069,7 @@
   },
   {
     "path": "scripts/e2e/firefox.e2e.cjs",
-    "sha256": "9cb9f4d8c48cd560049fbff5c9c6e972588106c10a39623a8e41b80148cc546e"
+    "sha256": "baccda6ee70517558748d1b09d3a7833be79f4a2a49399a76f9dabe409c4b1b4"
   },
   {
     "path": "scripts/e2e/fixtures/custom-assets/.gitignore",
@@ -1129,7 +1129,7 @@
   },
   {
     "path": "scripts/lint-firefox.mjs",
-    "sha256": "68d2913bf209185cab8a8a0b5a09720afce8ae3675878dcf6928316ca2830689"
+    "sha256": "43cd1747e30a4d543fadc338bf73c709ec23aa966cb9fa100efff24193e41dca"
   },
   {
     "path": "scripts/package-extension.mjs",

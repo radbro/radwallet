@@ -441,7 +441,7 @@
   },
   {
     "path": "apps/wallet/src/state.ts",
-    "sha256": "77fbe44fdbe14b1272e68a864215bfc623ce4f459f4e502d09ff4f87c3106edc"
+    "sha256": "83036eb693c1a39bd81cf4d47157c246a349945453c8dd1d14da203ef3960463"
   },
   {
     "path": "apps/wallet/src/storage.ts",
@@ -704,24 +704,24 @@
     "sha256": "aebe5049ad530c04b76bf4b0128723c276aba8a77d69bd0cb475a06040b742ec"
   },
   {
-    "path": "docs/assets/ccip-Cr9BBijB.js",
-    "sha256": "29b2ef9a4ef66bc5fada157da91b29b51afae1739004fa9761d4f00b64edac0f"
+    "path": "docs/assets/ccip-mhXZAA2V.js",
+    "sha256": "f6c7f80b5e7e111428787dbc5a0bc1042e9d140bc0b6795119530bf210fd35af"
   },
   {
     "path": "docs/assets/index-B71C9s6t.css",
     "sha256": "c51b4804b60e6c5db03d29d787e9df7ace6b52d67b9c44cd0ee8c3bae53d3c59"
   },
   {
-    "path": "docs/assets/index-CaXmXV7B.js",
-    "sha256": "dfe0aabc820d7eaa52834e5052792cc76b99782b95eab2b9cc254f3e3079e189"
+    "path": "docs/assets/index-cUWD5ZOj.js",
+    "sha256": "64f6d709535937c6e50b7f7d5eca35288dc98cbb7bfa2d8281a421bf5fd57f7f"
   },
   {
-    "path": "docs/assets/web-D7rXdAO8.js",
-    "sha256": "3f9c717a5a58d1d92911eacb6ea1f25f0aab8da640ec609785c0d2fc1857e7d0"
+    "path": "docs/assets/web-BWoFOFwT.js",
+    "sha256": "2c2f28eba5d0a3379ad48ac1bd7cd7c91cb2afc846498421ba7441f4e18e2724"
   },
   {
-    "path": "docs/assets/web-DU8XB9z1.js",
-    "sha256": "25951773fbd06a7701d6446decb1c4797191cffc61bca0bbb8f896660370cd15"
+    "path": "docs/assets/web-oqWKpX_c.js",
+    "sha256": "dce374add5d4fe0146ee2ca49fd0eb2b194b3796340c0c41d5a8f0d94b72ba41"
   },
   {
     "path": "docs/demo/icons/icon-192.png",
@@ -733,7 +733,7 @@
   },
   {
     "path": "docs/demo/index.html",
-    "sha256": "1bec1f7029e732e73d843297e9c845854fa2438e1234ae1172ce9cc9b8bd10d0"
+    "sha256": "857145f994a8f87f34691776ca60e988b98e608f991483993a559f7feea9efd8"
   },
   {
     "path": "docs/demo/manifest.webmanifest",
@@ -753,7 +753,7 @@
   },
   {
     "path": "docs/index.html",
-    "sha256": "55a1561b4fb1eae388670a0637c08d0721091f0ec49b4fcee3e1b89f23368504"
+    "sha256": "b2e3ec428ff17f450bf5ba7c1b6ab4e8a6e0eb66524fb329c540febdb9e49259"
   },
   {
     "path": "docs/manifest.webmanifest",

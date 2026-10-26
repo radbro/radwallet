@@ -488,10 +488,11 @@ function dropToUnlock(why: string): void {
 
 session.onAutoLock = () => dropToUnlock('auto-locked. the vault waits for no one.');
 
-// the background answered 'locked' — it idled out or the extension reloaded
-onRemoteLocked(() =>
-  dropToUnlock('the background dropped your keys (it sleeps when idle). unlock again — nothing is lost.'),
-);
+// the background answered 'locked': the timer ran out, another window locked
+// it, or the browser or extension restarted. A page cannot tell which, so the
+// toast says only what happened. A worker that merely idled out restores its
+// session from the encrypted envelope and never gets here.
+onRemoteLocked(() => dropToUnlock('wallet locked. unlock again.'));
 
 function clearPortfolioSnapshot(): void {
   portfolioEpoch++;
@@ -606,7 +607,7 @@ export function revalidateSession(): Promise<void> {
     await hydratePortfolioSettings();
     const st = await session.status().catch(() => null);
     if (st && st.locked) {
-      dropToUnlock('the background dropped your keys while you were away. unlock again.');
+      dropToUnlock('wallet locked while you were away. unlock again.');
       return;
     }
     // Visibility and focus usually arrive as a pair. Keep that pair to one

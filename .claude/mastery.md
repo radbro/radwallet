@@ -55,6 +55,9 @@ and third-party behavior before changing an integration.
   wallet. `readUsdRate` falls back to Base's ETH/USDC pool.
 - Name a failed endpoint by host and status code only. A full RPC URL can
   carry an API key.
+- A node failure inside the balance multicall must throw, so the pool moves
+  on. Some nodes answer `eth_getBalance` and refuse `eth_call`. A token that
+  reverts is the token answering: drop it, do not rotate.
 
 ## Privacy and evidence
 

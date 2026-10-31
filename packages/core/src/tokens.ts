@@ -193,7 +193,15 @@ export async function sweepBalances(
         // tokens go through as ONE eth_call at this size, and faster.
         16_384)
       : Promise.resolve([]),
-  ]).catch((e) => { throw new Error((e as Error).message.split('\n')[0]); });
+  ]);
+  // A token that reverts is the token answering; anything else is the node.
+  // allowFailure copies a node's refusal onto every token, and dropping them
+  // showed the wallet as holding only ETH: rpc.flashbots.net answers
+  // eth_getBalance and refuses eth_call, so every wallet pinned to it lost its
+  // tokens without a word. Hand the chain to the next endpoint instead.
+  for (const r of balances) {
+    if (r.status === 'failure' && !isContractRefusal(r.error)) throw r.error;
+  }
 
   const out: TokenBalance[] = [{
     symbol: info.nativeSymbol,
@@ -242,15 +250,47 @@ export async function sweepChains(
   chainIds: number[] = SCAN_CHAIN_IDS,
   extra: Record<number, KnownToken[]> = {},
 ): Promise<ChainSweep[]> {
+  // every endpoint's own answer, so a chain that did not answer names who
+  // said what instead of only the last of them
+  const failed: Record<number, string[]> = {};
   const results = await Promise.allSettled(
-    chainIds.map((id) => withFailover(endpointsFor(id), (ep) => sweepBalances(ep, id, address, extra[id] ?? []))),
+    chainIds.map((id) => withFailover(endpointsFor(id), async (ep) => {
+      try {
+        return await sweepBalances(ep, id, address, extra[id] ?? []);
+      } catch (error) {
+        (failed[id] ??= []).push(describeEndpointFailure(ep, error));
+        throw error;
+      }
+    })),
   );
   return chainIds.map((chainId, i) => {
     const r = results[i];
     return r.status === 'fulfilled'
       ? { chainId, balances: r.value }
-      : { chainId, balances: [], error: (r.reason as Error).message.split('\n')[0] };
+      : {
+        chainId,
+        balances: [],
+        error: failed[chainId]?.join(' · ') || (r.reason as Error).message.split('\n')[0],
+      };
   });
+}
+
+/**
+ * One endpoint's failure, short enough for a banner: the host and the HTTP
+ * status or JSON-RPC error code, else the first line of the error. Never the
+ * full URL — a user's own endpoint can carry an API key in its path.
+ */
+export function describeEndpointFailure(endpoint: string, error: unknown): string {
+  let host = endpoint;
+  try { host = new URL(endpoint).host; } catch { /* keep it as configured */ }
+  let current: unknown = error;
+  for (let depth = 0; depth < 8 && current && typeof current === 'object'; depth++) {
+    const { status, code, cause } = current as { status?: unknown; code?: unknown; cause?: unknown };
+    if (typeof status === 'number') return `${host}: HTTP ${status}`;
+    if (typeof code === 'number') return `${host}: RPC error ${code}`;
+    current = cause;
+  }
+  return `${host}: ${(error instanceof Error ? error.message : String(error)).split('\n')[0]}`;
 }
 
 /**

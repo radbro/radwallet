@@ -2161,6 +2161,84 @@ test('price: a quote call that outgrows the gas cap is split, not read as "no po
   }
 });
 
+/**
+ * A node for the balance sweep. `refuseCalls` answers eth_getBalance and
+ * refuses eth_call with -32601, which is what rpc.flashbots.net does;
+ * otherwise TOKEN holds 5 and REVERTER reverts like a broken token.
+ */
+async function sweepNode(refuseCalls: boolean, token: string, reverter: string) {
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      const answer = (request: { id?: unknown; method: string; params?: unknown[] }) => {
+        const id = request.id ?? null;
+        if (request.method === 'eth_getBalance') return { jsonrpc: '2.0', id, result: '0xde0b6b3a7640000' };
+        if (request.method !== 'eth_call') return { jsonrpc: '2.0', id, result: '0x' };
+        if (refuseCalls) return { jsonrpc: '2.0', id, error: { code: -32601, message: 'rpc method is not whitelisted' } };
+        const data = (request.params?.[0] as { data: `0x${string}` }).data;
+        const calls = decodeFunctionData({ abi: multicall3Abi, data }).args[0] as readonly { target: string }[];
+        return {
+          jsonrpc: '2.0',
+          id,
+          result: encodeFunctionResult({
+            abi: multicall3Abi,
+            functionName: 'aggregate3',
+            result: calls.map((call) => call.target.toLowerCase() === reverter.toLowerCase()
+              ? { success: false, returnData: '0x' as const }
+              : {
+                success: true,
+                returnData: encodeFunctionResult({
+                  abi: erc20Abi,
+                  functionName: 'balanceOf',
+                  result: call.target.toLowerCase() === token.toLowerCase() ? 5n * 10n ** 18n : 0n,
+                }),
+              }),
+          }),
+        };
+      };
+      const request = JSON.parse(body);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(Array.isArray(request) ? request.map(answer) : answer(request)));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const address = server.address();
+  assert.ok(address && typeof address !== 'string');
+  return {
+    url: `http://127.0.0.1:${address.port}`,
+    host: `127.0.0.1:${address.port}`,
+    close: () => new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve())),
+  };
+}
+
+test('sweep: a node that refuses eth_call hands the chain on instead of hiding the tokens', async () => {
+  const { sweepChains } = await import('../src/tokens.js');
+  const TOKEN = '0x00000000000000000000000000000000000000c1';
+  const REVERTER = '0x00000000000000000000000000000000000000c2';
+  const extra = { 1: [TOKEN, REVERTER].map((address, i) => ({
+    chainId: 1, address: address as `0x${string}`, symbol: `T${i}`, name: `Token ${i}`, decimals: 18,
+  })) };
+  const relay = await sweepNode(true, TOKEN, REVERTER);
+  const full = await sweepNode(false, TOKEN, REVERTER);
+  try {
+    const owner = '0x00000000000000000000000000000000000000a1';
+    const [swept] = await sweepChains(() => [relay.url, full.url], owner, [1], extra);
+    assert.equal(swept.error, undefined);
+    const held = swept.balances.find((b) => b.address?.toLowerCase() === TOKEN);
+    assert.equal(held?.amount, '5', 'the token the relay could not read comes from the next node');
+    assert.ok(!swept.balances.some((b) => b.address?.toLowerCase() === REVERTER),
+      'a token that reverts is the token answering: dropped, not a reason to rotate');
+
+    const [failed] = await sweepChains(() => [relay.url, 'http://127.0.0.1:1'], owner, [1], extra);
+    assert.equal(failed.error, `${relay.host}: RPC error -32601 · 127.0.0.1:1: HTTP request failed.`,
+      'a chain nobody answered names each node and what it said');
+  } finally {
+    await relay.close();
+    await full.close();
+  }
+});
+
 // ---- Transfer netting for transaction previews --------------------------
 // Canned logs prove each wallet receives its own transfer summary.
 import {

@@ -201,6 +201,13 @@ export interface CustomChainConfig {
   testnet: boolean;
   /** Optional Etherscan-compatible explorer base, e.g. https://scan.example. */
   explorer?: string;
+  /**
+   * Switched off by its owner: the record and its RPC pool are kept, but the
+   * chain leaves the registry, so nothing sweeps it, lists it or switches to
+   * it, and a site asking for it gets 4902. Absent means on; only `false` is
+   * ever stored, so a record written before the switch existed reads as on.
+   */
+  enabled?: boolean;
 }
 
 const BUILTIN_CHAIN_IDS = new Set(Object.keys(CHAINS).map(Number));
@@ -228,17 +235,20 @@ export function normalizeCustomChain(raw: unknown): CustomChainConfig | null {
     id, name, nativeSymbol, endpoint,
     testnet: value.testnet !== false,
     ...(explorer ? { explorer } : {}),
+    ...(value.enabled === false ? { enabled: false } : {}),
   };
 }
 
 /**
  * Register one owner-configured chain for the current runtime. Callers persist
  * the normalized return value themselves, so this pure registry never touches
- * browser storage and cannot be reached by a webpage.
+ * browser storage and cannot be reached by a webpage. A switched-off record is
+ * refused: registering IS switching on, so pass it without `enabled: false`.
  */
 export function registerCustomChain(raw: unknown): CustomChainConfig | null {
   const config = normalizeCustomChain(raw);
-  if (!config || BUILTIN_CHAIN_IDS.has(config.id) || CHAINS[config.id]) return null;
+  if (!config || config.enabled === false
+    || BUILTIN_CHAIN_IDS.has(config.id) || CHAINS[config.id]) return null;
   const explorer = config.explorer?.replace(/\/$/, '');
   const chain = defineChain({
     id: config.id,
@@ -278,14 +288,22 @@ export function unregisterCustomChain(id: number): boolean {
   return true;
 }
 
-/** Replace the runtime custom registry with valid, owner-persisted entries. */
+/**
+ * Replace the runtime custom registry with valid, owner-persisted entries.
+ * Switched-off entries are validated and returned, so a caller that persists
+ * the result keeps them, but only switched-on ones reach the registry.
+ */
 export function replaceCustomChains(raw: unknown): CustomChainConfig[] {
   for (const id of [...customChainIds]) unregisterCustomChain(id);
   if (!Array.isArray(raw)) return [];
   const accepted: CustomChainConfig[] = [];
+  const seen = new Set<number>();
   for (const value of raw) {
-    const config = registerCustomChain(value);
-    if (config) accepted.push(config);
+    const config = normalizeCustomChain(value);
+    if (!config || seen.has(config.id) || BUILTIN_CHAIN_IDS.has(config.id)) continue;
+    if (config.enabled !== false && !registerCustomChain(config)) continue;
+    seen.add(config.id);
+    accepted.push(config);
   }
   return accepted;
 }

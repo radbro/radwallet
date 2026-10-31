@@ -95,6 +95,7 @@ function deployFixture(contract) {
     const extensionId = new URL(worker.url()).host;
 
     const popup = await context.newPage();
+    popup.on('pageerror', (error) => console.log(`popup error: ${error.message}`));
     await popup.goto(`chrome-extension://${extensionId}/index.html`);
     await popup.click('text=I ALREADY HAVE ONE');
     await popup.fill('textarea.field', SEED);
@@ -198,6 +199,80 @@ function deployFixture(contract) {
     check('a website cannot replace the custom network RPC URL',
       JSON.parse(afterDapp.pools || '{}')[CHAIN_ID]?.endpoints?.join(',') === NODE_URL,
       afterDapp.pools || '');
+
+    // OFF keeps the record and its pool, and takes the chain away from
+    // everything else: the wallet, the asset list, and every site.
+    const hexId = `0x${CHAIN_ID.toString(16)}`;
+    const storedNetwork = (enabled) => popup.waitForFunction(async ({ id, enabled }) => {
+      const saved = await new Promise((resolve) => chrome.storage.local.get('customNetworks', resolve));
+      return JSON.parse(saved.customNetworks || '[]')
+        .some((network) => network.id === id && (network.enabled !== false) === enabled);
+    }, { id: CHAIN_ID, enabled }, { timeout: 20_000 });
+    await dapp.evaluate(() => { window.__radChainEvents = []; });
+    await popup.click('.tabbar .tab >> text=SETTINGS');
+    await popup.click('.setrowlink:has-text("NETWORKS")');
+    await popup.getByLabel('use Local Anvil').uncheck();
+    await popup.waitForSelector('.rpcrow.off:has-text("Local Anvil")', { timeout: 20_000 });
+    await storedNetwork(false);
+    await popup.screenshot({ path: path.join(os.tmpdir(), 'radwallet-custom-network-off.png'), fullPage: true });
+    const offSaved = await worker.evaluate(() => new Promise((resolve) =>
+      chrome.storage.local.get(['customNetworks', 'pools', 'chainId'], resolve)));
+    const offNetworks = JSON.parse(offSaved.customNetworks || '[]');
+    check('switching a custom network off keeps its record and its RPC pool',
+      offNetworks.length === 1 && offNetworks[0].enabled === false && offNetworks[0].endpoint === NODE_URL
+        && JSON.parse(offSaved.pools || '{}')[CHAIN_ID]?.endpoints?.join(',') === NODE_URL,
+      JSON.stringify({ networks: offNetworks, pools: offSaved.pools }));
+
+    await dapp.waitForFunction(() => window.__radChainEvents.includes('0x1'), { timeout: 20_000 });
+    const offDapp = await dapp.evaluate(async (chainId) => {
+      const code = async (method, params) => {
+        try { await window.ethereum.request({ method, params }); return 'accepted'; } catch (e) { return e.code; }
+      };
+      return {
+        current: await window.ethereum.request({ method: 'eth_chainId' }),
+        events: window.__radChainEvents,
+        switched: await code('wallet_switchEthereumChain', [{ chainId }]),
+        added: await code('wallet_addEthereumChain', [{
+          chainId, chainName: 'site turns it back on', rpcUrls: ['https://site-controlled.example'],
+        }]),
+      };
+    }, hexId);
+    check('switching off the selected network moves the wallet to Ethereum and tells the open dapp',
+      offSaved.chainId === '1' && offDapp.current === '0x1' && offDapp.events.join(',') === '0x1',
+      JSON.stringify({ chainId: offSaved.chainId, ...offDapp }));
+    check('a site can neither switch to nor re-add a switched-off network',
+      offDapp.switched === 4902 && offDapp.added === 4902, JSON.stringify(offDapp));
+
+    await popup.click('.tabbar .tab >> text=HOME');
+    await popup.waitForSelector('.balance .big', { timeout: 30_000 });
+    const offOptions = await popup.$$eval(`${networkFilter} option`, (options) => options.map((o) => o.value));
+    const offTokenRows = await popup.getByTitle('Local Anvil Token details').count();
+    check('a switched-off network leaves the asset filter and the asset list',
+      !offOptions.includes(String(CHAIN_ID)) && offOptions.includes('1') && offTokenRows === 0,
+      JSON.stringify({ options: offOptions, tokenRows: offTokenRows }));
+
+    await popup.reload();
+    await popup.waitForSelector('.balance .big', { timeout: 30_000 });
+    await popup.click('.tabbar .tab >> text=SETTINGS');
+    await popup.click('.setrowlink:has-text("NETWORKS")');
+    await popup.waitForSelector('.rpcrow:has-text("Local Anvil")', { timeout: 20_000 });
+    const reloadedOn = await popup.getByLabel('use Local Anvil').isChecked();
+    check('a reload keeps it switched off', !reloadedOn
+      && await popup.locator('.rpcrow.off:has-text("Local Anvil")').count() === 1);
+
+    await popup.getByLabel('use Local Anvil').check();
+    await storedNetwork(true);
+    const onSaved = await worker.evaluate(() => new Promise((resolve) =>
+      chrome.storage.local.get(['customNetworks', 'pools'], resolve)));
+    check('switching it back on drops the flag and keeps the same pool',
+      JSON.parse(onSaved.customNetworks || '[]').every((network) => !('enabled' in network))
+        && JSON.parse(onSaved.pools || '{}')[CHAIN_ID]?.endpoints?.join(',') === NODE_URL,
+      JSON.stringify(onSaved));
+    await popup.click('.tabbar .tab >> text=HOME');
+    await popup.getByTitle('Local Anvil Token details').waitFor({ timeout: 20_000 });
+    await popup.selectOption(networkFilter, String(CHAIN_ID));
+    await dapp.waitForFunction((id) => window.__radChainEvents.at(-1) === id, hexId, { timeout: 20_000 });
+    check('a switched-on network is back in the asset list and reaches the dapp', true);
   } finally {
     if (context) await context.close();
     if (dappServer) await new Promise((resolve) => dappServer.close(resolve));

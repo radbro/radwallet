@@ -1,7 +1,7 @@
 [
   {
     "path": ".claude/mastery.md",
-    "sha256": "24b38cd963c1ce653d0b33d3e07ab7f032209fccdf08a019af0e2dc0c40c0cde"
+    "sha256": "9f741faa89a2a14d21b9b0147fb3f75d976650d5ba5f82a9edbf6f218e9a90e1"
   },
   {
     "path": ".github/workflows/ci.yml",
@@ -405,7 +405,7 @@
   },
   {
     "path": "apps/wallet/src/screens/settings.tsx",
-    "sha256": "1e16f47bd4d8bb355bae36a925390ec27ad20a9cde4360f7c0b37124a7dde622"
+    "sha256": "ae9e037b3152a59c36945a7e1d1a4bb99a05cfa79c4e1e45784d4b87874b9294"
   },
   {
     "path": "apps/wallet/src/screens/site.tsx",
@@ -441,7 +441,7 @@
   },
   {
     "path": "apps/wallet/src/state.ts",
-    "sha256": "db993113ad0eba2a3c0316e01e2d60e80c90ac56e2d5a894d6f821e8c6b5c98f"
+    "sha256": "81078519d4b7e9d98f2a4d3dfb6332c67860b99ca9182b4f4d08f638b2bb248a"
   },
   {
     "path": "apps/wallet/src/storage.ts",
@@ -449,7 +449,7 @@
   },
   {
     "path": "apps/wallet/src/style.css",
-    "sha256": "926375f6826606817e30151251986aef96ab57ac0f2b6e87103ee3a82905ac9c"
+    "sha256": "5688eec7b07e73923dce52696038fefd2642d8c0f2759a8ea4f34efcd1f5ac7d"
   },
   {
     "path": "apps/wallet/src/swaptrack.ts",
@@ -708,24 +708,24 @@
     "sha256": "aebe5049ad530c04b76bf4b0128723c276aba8a77d69bd0cb475a06040b742ec"
   },
   {
-    "path": "docs/assets/ccip-DruU820f.js",
-    "sha256": "a6dbf5761761ff17d091a5afb87cb768b1d02908040d8b53aa14633fd56ef5af"
+    "path": "docs/assets/ccip-Do6jbCDo.js",
+    "sha256": "da3ec8dc11ae3eb67a8b80c2160c4a93640b387c3968f04fd09c6f3ae171c88d"
   },
   {
-    "path": "docs/assets/index-Bup_-_yd.js",
-    "sha256": "3a4892afdf8637d004c21c0397505ee06b66d1de10a84ac0c764c8919a0972a0"
+    "path": "docs/assets/index-BSzPOYn0.js",
+    "sha256": "5d827c026898674962c6ee2ba324975f764dd2996e2b24478db4be41afd559ab"
   },
   {
-    "path": "docs/assets/index-r-RoGn1W.css",
-    "sha256": "237f9cf9f8abacbdd8c91d837198858ca97c83ce58a53920f2731b83b283dd2a"
+    "path": "docs/assets/index-CR1dBIzw.css",
+    "sha256": "b4c7fbc3b85896dbfc8be64b74e20b1f35c744ae176e26b396f6523ca86b895c"
   },
   {
-    "path": "docs/assets/web-CUkg2Zl9.js",
-    "sha256": "abb7f79f57acd4f61bf16c5c951b1b48c17cdb6515c81b147abe55ba21519d35"
+    "path": "docs/assets/web-BCfivoJB.js",
+    "sha256": "f421d5b361e68eeb8170af5225c8cee1173217f5b76298461e1bcd8b0e6547c4"
   },
   {
-    "path": "docs/assets/web-DMlE1yZd.js",
-    "sha256": "bfc21b0cbed236b5b4843bed1a7047496653c330be2459b8598b1175eb912a4e"
+    "path": "docs/assets/web-gQmIyv7q.js",
+    "sha256": "a28c27cc2e955b1c633f566f6b40c16d2bcdee063a91f2c30394b3ebac4a6368"
   },
   {
     "path": "docs/demo/icons/icon-192.png",
@@ -737,7 +737,7 @@
   },
   {
     "path": "docs/demo/index.html",
-    "sha256": "dac4a6bfb1a7b00adb03e8adf37f6b82b883aa4b4e8fff313061a52186bd2e15"
+    "sha256": "2e55e1f3fe743b43be07408d3d05b524daefacdcc75d86a5bb2231940d816195"
   },
   {
     "path": "docs/demo/manifest.webmanifest",
@@ -757,7 +757,7 @@
   },
   {
     "path": "docs/index.html",
-    "sha256": "b5cb9f5568026589394e2fa45c71e7322f1cc342ffbe69c6bc9ddf4425b03855"
+    "sha256": "59e1ce0a7b2382b93d61cf7773ecc90f59264459c65826f38f08012e0c8efb49"
   },
   {
     "path": "docs/manifest.webmanifest",
@@ -797,7 +797,7 @@
   },
   {
     "path": "packages/core/src/chains.ts",
-    "sha256": "1a9c8ca9fc3a1d990252d338882b9e816ea621e2a0eeb5f29e8ed05b4187d24e"
+    "sha256": "fe1eeb90501681b606024afac54359bf5d085aa235ab650423dba2bc45f86d25"
   },
   {
     "path": "packages/core/src/demo.ts",
@@ -905,7 +905,7 @@
   },
   {
     "path": "packages/core/test/core.test.ts",
-    "sha256": "cd7b25027b0e9169cc49aa5d20fb3903ead0c786bdd89be4fe626f251d92f776"
+    "sha256": "c79228e024f716f9d59e4d9933077985fd577013fde9475d404c02a3dbdcb7a2"
   },
   {
     "path": "packages/core/test/nfts.test.ts",
@@ -1065,7 +1065,7 @@
   },
   {
     "path": "scripts/e2e/custom-network.e2e.cjs",
-    "sha256": "64c39abd8c14051c92f34745a6c39f3cd090eb11c3d24379cdd70dca16433911"
+    "sha256": "0beb5195f07ed8d2098abe7b9627b50f5a722c99a614b3d93ca5abebc1fcaf1a"
   },
   {
     "path": "scripts/e2e/extension.e2e.cjs",

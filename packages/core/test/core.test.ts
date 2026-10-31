@@ -380,6 +380,7 @@ import {
   CHAINS, CHAIN_IDS, SCAN_CHAIN_IDS, TESTNET_CHAIN_IDS, isTestnet,
   chainInfo, explorerAddressUrl, explorerTxUrl, explorerTokenUrl, explorerNftUrl,
   TOKENS, COLLECTIONS, MULTICALL3, registerCustomChain, unregisterCustomChain,
+  replaceCustomChains, normalizeCustomChain,
 } from '../src/chains.js';
 import { client as mainnetClient, sendDappTx } from '../src/chain.js';
 import { chainClient, readContracts } from '../src/tokens.js';
@@ -495,6 +496,37 @@ test('chains: a custom network without Multicall3 reads tracked contracts direct
   } finally {
     unregisterCustomChain(id);
   }
+});
+
+test('chains: a switched-off custom network is kept but never registered', () => {
+  const on = { id: 31337, name: 'Local Anvil', nativeSymbol: 'ETH', endpoint: 'http://127.0.0.1:8545', testnet: true };
+  const off = { id: 31339, name: 'Sometimes Node', nativeSymbol: 'ETH', endpoint: 'http://127.0.0.1:8546', testnet: false, enabled: false };
+  try {
+    // only `false` is stored: a record from before the switch existed reads as on
+    assert.deepEqual(normalizeCustomChain(on), on);
+    assert.deepEqual(normalizeCustomChain({ ...on, enabled: true }), on);
+    assert.equal(normalizeCustomChain(off)?.enabled, false);
+
+    const kept = replaceCustomChains([on, off, { ...off, name: 'duplicate' }, { ...off, id: 1 }]);
+    assert.deepEqual(kept, [on, off], 'the off record survives a reload; duplicates and built-in ids do not');
+    assert.ok(CHAIN_IDS.includes(on.id));
+    assert.ok(!CHAIN_IDS.includes(off.id), 'off is not in the registry');
+    assert.equal(CHAINS[off.id], undefined);
+    assert.ok(!TESTNET_CHAIN_IDS.includes(off.id));
+
+    // registering IS switching on, so a record still marked off is refused
+    assert.equal(registerCustomChain(off), null);
+    assert.ok(!CHAIN_IDS.includes(off.id));
+    const back = registerCustomChain({ ...off, enabled: true });
+    assert.equal(back?.enabled, undefined);
+    assert.ok(CHAIN_IDS.includes(off.id));
+    assert.ok(unregisterCustomChain(off.id));
+    assert.ok(!CHAIN_IDS.includes(off.id));
+  } finally {
+    replaceCustomChains([]);
+  }
+  assert.ok(!CHAIN_IDS.includes(on.id));
+  assert.ok(!CHAIN_IDS.includes(off.id));
 });
 
 test('chain clients: CCIP-read is off, so contracts cannot choose fetch gateways', async () => {

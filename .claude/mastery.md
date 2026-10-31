@@ -40,6 +40,10 @@ and third-party behavior before changing an integration.
 ## Chain reads and signing
 
 - Probe the chain ID before accepting a new RPC endpoint.
+- A custom network switched off leaves the registry but keeps its record
+  and RPC pool. `replaceCustomChains` must still return off records, or boot
+  deletes them. A screen that keeps its own chain ID must fall back at
+  render when that chain leaves the registry.
 - Token decimals must come from chain reads.
 - Reject excess decimal precision before preview and encoding.
 - Use integer values for quantities and accepted swap minimums.

@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useState } from 'preact/hooks';
 import {
   prefs, pool, updatePoolFor, poolFor, persistPrefs, rotateNow, addCustomNetwork, removeCustomNetwork, customNetworks,
+  setCustomNetworkEnabled,
   accounts, chainId, say, DEMO, refresh, sayError, endpoint, poolsAll, nfts,
   bioSealed, bioReady, enableBiometrics, disableBiometrics, updateAutoLock,
 } from '../state.js';
@@ -139,7 +140,10 @@ export function Settings() {
   const [newProv, setNewProv] = useState<IndexerProvider>('blockscout');
   const [newKey, setNewKey] = useState('');
   // the pool panel edits ANY chain, not just the one the wallet is switched to
-  const [poolChain, setPoolChain] = useState(chainId.value);
+  const [pickedPoolChain, setPoolChain] = useState(chainId.value);
+  // a custom network removed or switched off has left the registry, and this
+  // panel re-renders before any handler could move it; show the wallet's chain
+  const poolChain = CHAINS[pickedPoolChain] ? pickedPoolChain : chainId.value;
   const newInfo = providerInfo(newProv);
   const editing = poolFor(poolChain);
   const [adding, setAdding] = useState(false);
@@ -462,14 +466,23 @@ export function Settings() {
               </button>
             </div>
             {customNetworks.value.map((network) => (
-              <div class="rpcrow" key={network.id}>
-                <span class="n">{network.id}</span>
-                <span class="ep">{network.name} · {network.endpoint}</span>
+              <div class={`rpcrow${network.enabled === false ? ' off' : ''}`} key={network.id}>
+                {/* off keeps the record and its RPC pool; only the registry forgets it */}
+                <label class="neton">
+                  <input
+                    type="checkbox" checked={network.enabled !== false} aria-label={`use ${network.name}`}
+                    onChange={(e) => {
+                      void setCustomNetworkEnabled(network.id, (e.currentTarget as HTMLInputElement).checked)
+                        .catch(sayError);
+                    }}
+                  />
+                  <span class="n">{network.id}</span>
+                  <span class="ep">{network.name} · {network.endpoint}
+                    {network.enabled === false && <span class="dim"> · off</span>}</span>
+                </label>
                 <button
                   class="drop" title={`remove ${network.name}`} aria-label={`remove ${network.name}`}
-                  onClick={() => void removeCustomNetwork(network.id).then(() => {
-                    if (poolChain === network.id) setPoolChain(1);
-                  }).catch(sayError)}
+                  onClick={() => void removeCustomNetwork(network.id).catch(sayError)}
                 >×</button>
               </div>
             ))}

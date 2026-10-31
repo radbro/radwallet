@@ -486,6 +486,12 @@ label.row input:disabled + span{color:#9c9c9c}
 .rpcrow .drop{background:none; border:1px solid #333; cursor:pointer; color:#b4b4b4;
   font-family:'Courier New',monospace; font-size:14px; line-height:1; padding:6px 9px; flex:0 0 auto}
 .rpcrow .drop:hover{border-color:var(--red); color:#fff; background:var(--red)}
+/* a custom network's on/off switch: the whole row up to [×] is its label */
+.rpcrow .neton{display:flex; align-items:center; gap:8px; flex:1; min-width:0;
+  min-height:var(--tap-size,44px); cursor:pointer}
+.rpcrow .neton input{accent-color:var(--yl); flex:0 0 auto; margin:0}
+.rpcrow .neton .n{width:auto}
+.rpcrow.off .ep, .rpcrow.off .n{color:#9c9c9c}
 
 .feetable{font-size:13px; width:100%; border-collapse:collapse; margin:8px 0}
 .feetable td{padding:4px 2px; border-bottom:1px dotted #333}

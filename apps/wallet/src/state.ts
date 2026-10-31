@@ -212,6 +212,10 @@ export { CHAINS };
 export const customNetworks = signal<CustomChainConfig[]>([]);
 
 export async function addCustomNetwork(raw: unknown): Promise<CustomChainConfig> {
+  // a switched-off network is out of the registry, so registering would not
+  // see it and the list would carry the same chain twice
+  const off = customNetworks.value.find((n) => n.enabled === false && n.id === (raw as { id?: unknown } | null)?.id);
+  if (off) throw new Error(`that node is ${off.name}, which you switched off. switch it back on below.`);
   const config = registerCustomChain(raw);
   if (!config) throw new Error('that chain is already built in, already added, or has invalid network details');
   customNetworks.value = [...customNetworks.value, config];
@@ -228,11 +232,24 @@ export async function addCustomNetwork(raw: unknown): Promise<CustomChainConfig>
   return config;
 }
 
+/**
+ * Point everything that named a chain somewhere else once that chain has left
+ * the registry: the asset filter goes back to every network, and a wallet
+ * signing on it goes back to Ethereum. True when the signing chain moved.
+ */
+function leaveChain(id: number): boolean {
+  if (viewChain.value === id) viewChain.value = null;
+  if (chainId.value !== id) return false;
+  chainId.value = 1;
+  return true;
+}
+
 export async function removeCustomNetwork(id: number): Promise<void> {
   const network = customNetworks.value.find((candidate) => candidate.id === id);
-  if (!network || !unregisterCustomChain(id)) return;
-  const wasSelected = chainId.value === id;
-  if (wasSelected) chainId.value = 1;
+  if (!network) return;
+  // a switched-off network is already out of the registry
+  if (network.enabled !== false && !unregisterCustomChain(id)) return;
+  const wasSelected = leaveChain(id);
   customNetworks.value = customNetworks.value.filter((candidate) => candidate.id !== id);
   const nextPools = { ...poolsAll.value };
   delete nextPools[id];
@@ -240,6 +257,35 @@ export async function removeCustomNetwork(id: number): Promise<void> {
   await persistPrefs();
   if (wasSelected) publishWalletChainSelection(chainId.value);
   say(`${network.name} removed from this wallet.`);
+  tickBlocks();
+  void refresh();
+}
+
+/**
+ * Switch an owner-added network on or off without forgetting it. Off takes the
+ * chain out of the registry, so nothing sweeps it, lists it, or lets a site
+ * switch to it, but the record and its RPC pool stay: a local node you run
+ * some days comes back without re-typing it. Boot reads the same flag, and the
+ * background re-reads it before it answers any site.
+ */
+export async function setCustomNetworkEnabled(id: number, on: boolean): Promise<void> {
+  const network = customNetworks.value.find((candidate) => candidate.id === id);
+  if (!network || (network.enabled !== false) === on) return;
+  let next: CustomChainConfig;
+  let moved = false;
+  if (on) {
+    const live = registerCustomChain({ ...network, enabled: true });
+    if (!live) throw new Error(`${network.name} could not be switched on`);
+    next = live;
+  } else {
+    unregisterCustomChain(id);
+    moved = leaveChain(id);
+    next = { ...network, enabled: false };
+  }
+  customNetworks.value = customNetworks.value.map((candidate) => (candidate.id === id ? next : candidate));
+  await persistPrefs();
+  if (moved) publishWalletChainSelection(chainId.value);
+  say(on ? `${network.name} is back on.` : `${network.name} is off. nothing reads it until you switch it back on.`);
   tickBlocks();
   void refresh();
 }
@@ -1395,6 +1441,9 @@ export async function refresh(): Promise<void> {
  * indistinguishable from a broken one. Arbitrum gets the same deal.
  */
 export const scanChains = computed(() => {
+  // CHAIN_IDS is a plain array that adding, removing or switching off a custom
+  // network edits in place; this signal changes with it, so read it to recompute
+  void customNetworks.value;
   const out = [...SCAN_CHAIN_IDS];
   const sel = chainId.value;
   // the chain you switched to counts as one you asked about — unless it is a

@@ -1,7 +1,7 @@
 [
   {
     "path": ".claude/mastery.md",
-    "sha256": "ea452567fda85868c3cd6e7dbb24d321c960cdc743a0db2f886d53f494e7232d"
+    "sha256": "d1bd787a96c318ebe4c77d0cfa6b2b4826132ba1133861bf8b3d46dc916bb87b"
   },
   {
     "path": ".github/workflows/ci.yml",
@@ -393,7 +393,7 @@
   },
   {
     "path": "apps/wallet/src/screens/portfolio.tsx",
-    "sha256": "def18a83a34b61bd129e4deadede6c5e3d4d3327aca11e1dc914da7ce0d6fae9"
+    "sha256": "d951af908a032e6bea042ff47ae81dd4cc5af3e3042c8e47614ac9db1ff29478"
   },
   {
     "path": "apps/wallet/src/screens/receive.tsx",
@@ -441,7 +441,7 @@
   },
   {
     "path": "apps/wallet/src/state.ts",
-    "sha256": "642a3bf49d5f3ba0f85e7229bcfcab0e81274ac6d03c17c6a42f6150c8205d29"
+    "sha256": "db993113ad0eba2a3c0316e01e2d60e80c90ac56e2d5a894d6f821e8c6b5c98f"
   },
   {
     "path": "apps/wallet/src/storage.ts",
@@ -486,6 +486,10 @@
   {
     "path": "apps/wallet/test/tokenpick.test.ts",
     "sha256": "f118cac0d723eec05d94e80fafbb663c4db28b09802d01c532f343a0d75c9e72"
+  },
+  {
+    "path": "apps/wallet/test/usd-rate.test.ts",
+    "sha256": "a6e58d42352c9a02f7b8c44748634870d210580fb2fc47648e5425759719299c"
   },
   {
     "path": "apps/wallet/test/wallet-list.test.ts",
@@ -704,24 +708,24 @@
     "sha256": "aebe5049ad530c04b76bf4b0128723c276aba8a77d69bd0cb475a06040b742ec"
   },
   {
-    "path": "docs/assets/ccip-DU9twMoG.js",
-    "sha256": "f5b32da79b6221dbc8c350d66f98f7d51e8befe30f55b9875d82145cf7b38571"
+    "path": "docs/assets/ccip-JeHSaTFu.js",
+    "sha256": "7f2145565f8ba8ddee9605c30da89affdec50494ad895d99b7323476d34633a9"
   },
   {
-    "path": "docs/assets/index-C0Gtec29.js",
-    "sha256": "bb9db9d4e1f9d0745ca265219e39c28379b55eb7c9b750b1d609fbbb3958bebb"
+    "path": "docs/assets/index-Bb5OOjH7.js",
+    "sha256": "8e3eadb78fa10c6a99fd911e2f96602272477114f5d49fccfaf010509ceb90a5"
   },
   {
     "path": "docs/assets/index-r-RoGn1W.css",
     "sha256": "237f9cf9f8abacbdd8c91d837198858ca97c83ce58a53920f2731b83b283dd2a"
   },
   {
-    "path": "docs/assets/web-DVR9oftt.js",
-    "sha256": "9a819cc078b1f2ba1457854598fdec69505ec1f339da78dcfbe8112e56e34aeb"
+    "path": "docs/assets/web-BK1umUc4.js",
+    "sha256": "e89739cf2807b9c515b937aeff45deb59e1d0829bd3278de06359fd77b379146"
   },
   {
-    "path": "docs/assets/web-DghxpZqb.js",
-    "sha256": "90799733601c3af7e18c5785746f38fabbf8d68195ff1dd1a8f1e7c1c2ba20ab"
+    "path": "docs/assets/web-DAAZJ7qy.js",
+    "sha256": "584d72c74e88ed7d3d80b7b10c3bea90a4c4f869e3c23c61a84d2937522a26e5"
   },
   {
     "path": "docs/demo/icons/icon-192.png",
@@ -733,7 +737,7 @@
   },
   {
     "path": "docs/demo/index.html",
-    "sha256": "1c525b0b7a7e33604ce2e9944ac87a14fb2a06be24838024a7f5c95bf69c0586"
+    "sha256": "d5939df4222bd1e4400ae568d596901b68b2b57963a7e3b2732dda0ff56f06e6"
   },
   {
     "path": "docs/demo/manifest.webmanifest",
@@ -753,7 +757,7 @@
   },
   {
     "path": "docs/index.html",
-    "sha256": "c0803499ef9df4d75bcdf908ed09e197421f1caa3d188c438cf4c5bc1be6799d"
+    "sha256": "6a103cb050b405c001dca7a8ef63aa85a673028b2571defd17dab5d1c72651fd"
   },
   {
     "path": "docs/manifest.webmanifest",
@@ -769,7 +773,7 @@
   },
   {
     "path": "package.json",
-    "sha256": "cf72b706aca1da1e09bd81ee9df36fb1780b7431e598486cdf1ca4e7458789b7"
+    "sha256": "756b68357517e42206236f2a3585f7578e21a96ef93e05e6ed08afc1c7dde856"
   },
   {
     "path": "packages/core/package.json",

@@ -50,6 +50,11 @@ and third-party behavior before changing an integration.
 - A successful receipt must confirm a positive transfer before tracking a
   newly purchased token.
 - Gas is not deducted from route-output comparisons.
+- A failed ETH/USD rate read keeps the last good rate. A superseded refresh
+  still publishes a good rate, because the rate does not depend on the
+  wallet. `readUsdRate` falls back to Base's ETH/USDC pool.
+- Name a failed endpoint by host and status code only. A full RPC URL can
+  carry an API key.
 
 ## Privacy and evidence
 

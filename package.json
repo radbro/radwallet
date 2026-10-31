@@ -7,7 +7,7 @@
     "apps/*"
   ],
   "scripts": {
-    "test": "npm -w @radwallet/core run test && npm run test:swap && npm run test:clipboard && npm run test:addressbook && npm run test:wallet-list && npm run test:provider && npm run test:portfolio",
+    "test": "npm -w @radwallet/core run test && npm run test:swap && npm run test:clipboard && npm run test:addressbook && npm run test:wallet-list && npm run test:provider && npm run test:portfolio && npm run test:usd-rate",
     "test:wallet-list": "tsx --test apps/wallet/test/wallet-list.test.ts",
     "test:addressbook": "tsx --test apps/wallet/test/addressbook.test.ts",
     "e2e:addressbook": "npm run build && node scripts/e2e/addressbook.e2e.cjs",
@@ -31,7 +31,8 @@
     "build:android": "npm -w @radwallet/mobile run build",
     "lint:source": "node scripts/check-source.mjs",
     "test:provider": "tsx --test apps/wallet/test/provider-refusal.test.ts",
-    "test:portfolio": "tsx --test apps/wallet/test/portfolio-state.test.ts"
+    "test:portfolio": "tsx --test apps/wallet/test/portfolio-state.test.ts",
+    "test:usd-rate": "tsx --test apps/wallet/test/usd-rate.test.ts"
   },
   "devDependencies": {
     "playwright-core": "^1.62.1"

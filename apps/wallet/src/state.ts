@@ -281,6 +281,8 @@ export const sweepErrors = signal<Record<number, string>>({});
 export const nftError = signal<string | null>(null);
 /** dollars per ETH, read from a USDC pool on your own RPC. null = no pools */
 export const usdRate = signal<number | null>(null);
+/** why the last ETH/USD read failed, per chain asked; null after a good read */
+export const usdRateError = signal<string | null>(null);
 /** this wallet's holdings valued in ETH; null until priced */
 export const portfolioEth = signal<number | null>(null);
 /**
@@ -1123,12 +1125,55 @@ export function cycleAccount(dir: 1 | -1): void {
 }
 
 // ---- chain data -----------------------------------------------------------
-async function readUsdRate(): Promise<number | null> {
-  return withFailover(endpointsForChain(1), async (ep) => {
-    const found = await usdPerEth(ep, 1, { throwOnRpcError: true });
-    if (found === null) throw new Error('no ETH/USD pool answered');
-    return found;
-  }).catch(() => null);
+/**
+ * Where the dollar rate may come from, in order. ETH/USDC is one market on
+ * every chain, so when Ethereum's pool cannot answer, Base's can. Both are
+ * swept on every refresh already: the fallback asks no host the wallet does
+ * not already talk to, and the quote carries no address.
+ */
+const USD_RATE_CHAINS = [1, 8453];
+
+/**
+ * One endpoint's failure, short enough for a notice: the host and the HTTP
+ * status or JSON-RPC error code, else the first line of the error. Never the
+ * full URL — a user's own endpoint can carry an API key in its path.
+ */
+function endpointFailure(endpoint: string, error: unknown): string {
+  let host = endpoint;
+  try { host = new URL(endpoint).host; } catch { /* keep it as configured */ }
+  let current: unknown = error;
+  for (let depth = 0; depth < 8 && current && typeof current === 'object'; depth++) {
+    const { status, code, cause } = current as { status?: unknown; code?: unknown; cause?: unknown };
+    if (typeof status === 'number') return `${host}: HTTP ${status}`;
+    if (typeof code === 'number') return `${host}: RPC error ${code}`;
+    current = cause;
+  }
+  return `${host}: ${(error instanceof Error ? error.message : String(error)).split('\n')[0]}`;
+}
+
+export async function readUsdRate(): Promise<number | null> {
+  const reasons: string[] = [];
+  for (const id of USD_RATE_CHAINS) {
+    const failed: string[] = [];
+    try {
+      const rate = await withFailover(endpointsForChain(id), async (ep) => {
+        try {
+          const found = await usdPerEth(ep, id, { throwOnRpcError: true });
+          if (found === null) throw new Error('no ETH/USD pool answered');
+          return found;
+        } catch (e) {
+          failed.push(endpointFailure(ep, e));
+          throw e;
+        }
+      });
+      usdRateError.value = null;
+      return rate;
+    } catch (e) {
+      reasons.push(`${CHAINS[id].name} — ${failed.join(', ') || (e as Error).message.split('\n')[0]}`);
+    }
+  }
+  usdRateError.value = reasons.join(' · ');
+  return null;
 }
 
 /**
@@ -1239,8 +1284,11 @@ export async function refresh(): Promise<void> {
     // like flashbots gets no eth_call service, and a null price would read as
     // "this wallet is worth nothing"
     const rate = await readUsdRate();
+    // The rate is the same for every wallet, so a superseded refresh still
+    // publishes it; a failed read keeps the last good one. Writing null here
+    // used to blank the dollars whenever one read lost a race or a timeout.
+    if (rate !== null) usdRate.value = rate;
     if (!stillCurrent()) return;
-    usdRate.value = rate;
     const per: Record<string, number> = {};
     for (const id of scan) {
       // testnet ETH is play money: pricing it would put fake dollars in a real

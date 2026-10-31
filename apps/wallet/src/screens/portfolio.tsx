@@ -7,7 +7,7 @@ import {
 import {
   accounts, groups, screen, assetKey, portfolioHoldings, portfolioUpdatedAt,
   portfolioErrors, portfolioStale, portfolioSettings, setPortfolioSettings,
-  valueAllWallets, valuingWallets, walletValueProgress, usdRate, usd, sayError,
+  valueAllWallets, valuingWallets, walletValueProgress, usdRate, usdRateError, usd, sayError,
 } from '../state.js';
 import { IconBtn, useModalDialog } from '../bits.js';
 
@@ -236,7 +236,11 @@ export function Portfolio() {
       </div>
       <Donut rows={view.rows} total={view.totalEth} value={total}
         label={!loaded ? (refreshing ? 'LOADING' : 'NOT LOADED') : errors.length ? 'PARTIAL TOTAL' : 'SELECTED TOTAL'} />
-      {usdUnavailable && loaded && <p class="portfolio-notice">USD price unavailable. Select ETH to view values.</p>}
+      {usdUnavailable && loaded && (usdRateError.value
+        ? <details class="portfolio-notice"><summary>USD price unavailable. Select ETH to view values.</summary>
+          <p>{usdRateError.value}</p>
+        </details>
+        : <p class="portfolio-notice">USD price unavailable. Select ETH to view values.</p>)}
       {errors.length > 0 && <details class="portfolio-notice"><summary>{errors.length} balance reads unavailable</summary>
         {errors.map(([key, message]) => <p key={key}>{message}</p>)}
       </details>}

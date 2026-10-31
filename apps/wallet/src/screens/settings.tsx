@@ -383,7 +383,7 @@ export function Settings() {
             <button class="act" disabled={!validLock || savingLock} onClick={() => void saveAutoLock()}>
               {savingLock ? 'APPLYING…' : 'APPLY'}
             </button>
-            <span class="dim">Choose 1–240 whole minutes. APPLY restarts the timer now.
+            <span class="dim">Choose 1–240 minutes. APPLY restarts the timer now.
               Signing, wallet edits and stealth scans also restart it.</span>
           </div>
           <div class="fact">
@@ -446,8 +446,8 @@ export function Settings() {
           <div class="panel">
             <div class="hd">ADD CUSTOM NETWORK</div>
             <div class="note">
-              RADWALLET asks this URL for its chain ID before saving anything. It never takes an RPC URL from a website.
-              A new network is treated as test/development money until you deliberately change that below.
+              RADWALLET checks the node's chain ID before saving, and never takes a node from a website.
+              New networks count as test networks unless you untick the box below.
             </div>
             <input class="field" aria-label="custom network name" placeholder="name — e.g. Local Anvil"
               value={customName} onInput={(e) => setCustomName((e.target as HTMLInputElement).value)} />
@@ -458,7 +458,7 @@ export function Settings() {
             <label class="row">
               <input type="checkbox" checked={customTestnet} onChange={() => setCustomTestnet(!customTestnet)} />
               <span>Test/development network
-                <span class="dim"> — balances stay out of portfolio totals. Scan testnets checks every test network; adding a contract by address checks just that owner-selected chain.</span></span>
+                <span class="dim"> — kept out of portfolio totals. Scanned when Scan testnets is on, or when you add a token on it by address.</span></span>
             </label>
             <div class="btnrow">
               <button class="btn" disabled={addingNetwork} onClick={addNetwork}>
@@ -552,7 +552,7 @@ export function Settings() {
             <label class="row">
               <input type="checkbox" checked={p.testnets} onChange={() => toggle('testnets')} />
               <span>Scan testnets
-                <span class="dim"> — includes Sepolia, Base Sepolia and Robinhood Testnet in balance scans.
+                <span class="dim"> — adds every test network to balance scans.
                 Testnet balances are shown separately and excluded from portfolio totals.
                 Their RPC providers receive your wallet address.</span></span>
             </label>
@@ -752,8 +752,8 @@ export function Settings() {
             <div class="note">No sites connected.</div>
           )}
           {SESSION_IS_REMOTE && Object.keys(connections).length > 0 && (
-            <div class="note">Disconnecting stops wallet access. Sites may retain addresses
-              already shared and can still read their public transaction history.</div>
+            <div class="note">Disconnecting stops wallet access. A site keeps any address it
+              already saw, and can still read that address's public history.</div>
           )}
           {Object.entries(connections).map(([origin, addrs]) => (
             <div class="rpcrow" key={origin}>

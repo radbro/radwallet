@@ -1085,7 +1085,7 @@ async function runSwapFixture() {
 
     input = await openPicker(page, 'to');
     await input.fill(DEAD_TOKEN);
-    await waitForText(page, '.note.red', 'that contract will not say what it is');
+    await waitForText(page, '.note.red', 'could not read that contract as a token');
     assert(metadataCount(control, DEAD_TOKEN, 1) > 0, 'failed metadata token was not looked up');
     await closePicker(page);
 
@@ -1113,7 +1113,7 @@ async function runSwapFixture() {
     await page.waitForFunction(() => document.querySelector('.swaphead .netsel')?.value === '8453');
     input = await openPicker(page, 'to');
     await input.fill(UNKNOWN_RAD);
-    await waitForText(page, '.note.red', 'that contract will not say what it is');
+    await waitForText(page, '.note.red', 'could not read that contract as a token');
     assert(metadataCount(control, UNKNOWN_RAD, 8453) > 0, 'network switch did not re-check the pasted address on Base');
     assert.equal(await page.locator('.pickrow').filter({ hasText: shortContract(UNKNOWN_RAD) }).count(), 0,
       'mainnet transient contract stayed selectable after switching to Base');

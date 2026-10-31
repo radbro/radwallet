@@ -126,9 +126,11 @@ export function Home() {
             >↗</a>
             : <span class="addrex dim" title={`${explorerName} has no configured block explorer`}>—</span>}
         </div>
-        <div class="acrossline">
-          across {chainsHeld.value || SCAN_CHAIN_IDS.length} chains
-        </div>
+        {chainsHeld.value > 0 && (
+          <div class="acrossline">
+            across {chainsHeld.value} chain{chainsHeld.value === 1 ? '' : 's'}
+          </div>
+        )}
       </div>
 
       {/*
@@ -209,7 +211,7 @@ export function Home() {
       {rows.length === 0 && chainErrors.value.length === 0 && (
         <div class="note center" style={{ padding: 12 }}>
           {viewChain.value === null
-            ? `checking ${SCAN_CHAIN_IDS.length} chains… (or every RPC is unreachable — see SETTINGS)`
+            ? `checking ${SCAN_CHAIN_IDS.length} chains…`
             : `nothing on ${CHAINS[viewChain.value].name} yet.`}
         </div>
       )}
@@ -229,7 +231,7 @@ export function Home() {
       {viewChain.value !== null && isTestnet(viewChain.value) && !prefs.value.testnets && (
         <div class="note center" style={{ padding: 12 }}>
           on {CHAINS[viewChain.value].name} · testnet balances stay hidden until you
-          turn TESTNETS on in SETTINGS → NETWORKS
+          turn on Scan testnets in SETTINGS → NETWORKS
         </div>
       )}
 

@@ -162,8 +162,8 @@ export function AssetSheet() {
             {priceState === 'looking' && <div class="note">asking a pool…</div>}
             {priceState === 'none' && (
               <div class="note">
-                no Uniswap pool answered on this chain, so there is no on-chain price
-                to show. That is not the same as worthless.
+                no price: no Uniswap pool found for this token, or the node did not
+                answer.
               </div>
             )}
             {priceState === 'ok' && price && (

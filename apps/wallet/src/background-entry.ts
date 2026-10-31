@@ -1020,7 +1020,7 @@ ext.runtime.onMessage.addListener((msg: any, sender: any, sendResponse: (r: any)
               await armAutoLock();
             } catch {
               await forgetSession();
-              throw new Error('this browser could not protect the live wallet session. unlock refused.');
+              throw new Error('unlock failed: this browser blocked the wallet\'s storage. restart the browser and try again.');
             }
             sendResponse(sessionStatus());
             break;
@@ -1034,7 +1034,7 @@ ext.runtime.onMessage.addListener((msg: any, sender: any, sendResponse: (r: any)
               await beginSessionCache();
             } catch {
               await forgetSession();
-              throw new Error('this browser could not protect the live wallet session. wallet creation refused.');
+              throw new Error('wallet not created: this browser blocked the wallet\'s storage. nothing was saved.');
             }
             sendResponse(await write(secret));
             break;

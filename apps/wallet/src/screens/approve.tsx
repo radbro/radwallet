@@ -95,8 +95,8 @@ export function Approve() {
   if (decodedApprove && !signUnlimited) {
     if (allowanceDecimals == null) {
       allowanceError = allowanceMetadata?.request === req
-        ? 'Could not read token decimals. The spending limit cannot be verified safely.'
-        : 'Checking token decimals before reviewing the spending limit…';
+        ? 'Could not read this token\'s decimals, so the limit cannot be checked. SIGN stays off: REFUSE, then retry from the site.'
+        : 'Checking the token\'s decimals…';
     } else if (approveCall) {
       try { boundedAllowance = parseAllowance(rewriteAmt, allowanceDecimals); }
       catch (e) { allowanceError = e instanceof Error ? e.message : String(e); }
@@ -245,7 +245,7 @@ export function Approve() {
           SITE DID NOT NAME A SIGNER.
           <br />
           <span style={{ fontSize: 10, fontWeight: 'normal' }}>
-            the background refuses to guess a wallet for signatures or transactions.
+            RADWALLET will not guess which wallet signs.
           </span>
         </div>
       )}
@@ -254,7 +254,7 @@ export function Approve() {
           SITE WANTS {short(signerAddress ?? undefined)} — NOT ONE OF YOUR WALLETS.
           <br />
           <span style={{ fontSize: 10, fontWeight: 'normal' }}>
-            the background will refuse to sign for an address it does not hold or expose to this site.
+            RADWALLET signs only for your own wallets connected to this site.
           </span>
         </div>
       )}
@@ -267,7 +267,7 @@ export function Approve() {
         <div class="obey badver" style={{ fontSize: 13 }}>
           SIMULATION FAILED: {prev.error}
           <br />
-          <span style={{ fontSize: 10, fontWeight: 'normal' }}>signing anyway is how wallets get drained. REFUSE.</span>
+          <span style={{ fontSize: 10, fontWeight: 'normal' }}>it would revert, or the node did not answer. SIGN stays off: REFUSE, then retry from the site.</span>
         </div>
       )}
 
@@ -303,8 +303,8 @@ export function Approve() {
       )}
       {isTx && movesOff && (
         <div class="note dim" style={{ fontSize: 11 }}>
-          no endpoint in this chain's pool can simulate transfers, so the asset
-          changes are unknown — the gas and revert check below still ran.
+          could not preview asset changes on this network, so what moves is
+          unknown. the revert and gas check below still ran.
         </div>
       )}
 
@@ -362,7 +362,7 @@ export function Approve() {
             <span class="dir">→ {CHAINS[switchChainId]?.name ?? `chain ${switchChainId}`}</span>
           </div>
           <div class="note dim" style={{ fontSize: 10, marginTop: 6 }}>
-            this changes which chain the site can read and ask you to sign on. it signs nothing by itself.
+            this switches the wallet's network, for every connected site too. it signs nothing.
           </div>
         </div>
       )}
@@ -428,7 +428,7 @@ export function Approve() {
           {prev.in_.map((i) => (
             <div class="simrow in"><span class="dir">→</span><span class="what">{i.asset}</span></div>
           ))}
-          <div class="simrow"><span class="dir">EST. GAS</span><span class="what">{prev.gasEth} ETH</span></div>
+          <div class="simrow"><span class="dir">EST. GAS</span><span class="what">{prev.gasEth} {CHAINS[approvalChainId]?.nativeSymbol ?? 'ETH'}</span></div>
           <div class="note">{DEMO ? 'Demo preview. No RPC request was made.'
             : 'Checked using your selected RPC provider. Results may change before confirmation.'}</div>
         </div>
@@ -464,7 +464,6 @@ export function Approve() {
       </div>
       <div class="note center" style={{ marginTop: 8 }}>
         REFUSE is always as big as the other button. that is policy.
-        {acct ? '' : ' unlock first — keys stay in the background worker.'}
       </div>
       <FooterRing />
     </div>

@@ -132,7 +132,7 @@ export function Swap() {
     if (!acct) throw new Error('unlock a wallet before checking contracts');
     return withFailover(endpointsForChain(chain), async (node) => {
       const found = await probeToken(node, chain, address, acct.address);
-      if (!found) throw new Error('that contract will not say what it is');
+      if (!found) throw new Error('could not read that contract as a token');
       if (!Number.isInteger(found.token.decimals) || found.token.decimals < 0 || found.token.decimals > 36) {
         throw new Error('that token reports unsupported decimals');
       }
@@ -327,7 +327,7 @@ export function Swap() {
             setRouteEndpoint(found.endpoint);
             setReadyKey(quoteKey);
           } else {
-            setErr('no route found — all configured RPCs failed or pools missing');
+            setErr('no route right now: no pool for this pair, or the nodes did not answer. try again.');
           }
         } else {
           /*
@@ -359,7 +359,7 @@ export function Swap() {
           if (!current()) return;
           if (await useAggregator(found?.quote.amountOut ?? 0n) || !current()) return;
           if (!found) {
-            setErr(refusal ?? `no Uniswap pool for ${from.symbol} → ${to.symbol} on ${chainInfo(chain).name}`);
+            setErr(refusal ?? `no route for ${from.symbol} → ${to.symbol} on ${chainInfo(chain).name}, or its nodes did not answer.`);
           } else if (acct) {
             // one place decides what a swap costs in signatures — v3's single
             // approval, or v4's Permit2 pair plus any wrap/unwrap. The deadline
@@ -447,7 +447,7 @@ export function Swap() {
           return;
         }
         if (Date.now() >= until) {
-          throw new Error('Approval confirmation is still unavailable. Recheck approval to check the same transaction without sending another.');
+          throw new Error('Approval not confirmed yet. RECHECK APPROVAL checks it again without sending another.');
         }
         await new Promise((resolve) => setTimeout(resolve, 2_000));
       }
@@ -728,7 +728,7 @@ export function Swap() {
                 <div class="note">Network fees and any trading fees still apply.</div>
               </>
             )}
-            {!outText && !quoting && !err && <div class="note">enter an amount.</div>}
+            {!amtOk && !outText && !quoting && !err && <div class="note">enter an amount.</div>}
           </div>
 
           {needsApproval && outText && (
@@ -765,7 +765,7 @@ export function Swap() {
                 <tr><td>Wallet / aggregator fee</td><td class="free">0% / 0%</td></tr>
               </table>
               <div class="note">Simulation passed. Prices and network fees can change before confirmation.
-                A purchased token is added after a successful receipt confirms it arrived.</div>
+                A token new to RADWALLET shows on HOME once the swap confirms.</div>
               <div class="btnrow">
                 <button class="btn" disabled={working} onClick={() => setReview(null)}>REFUSE</button>
                 <button class="btn" disabled={working || !!sent} onClick={() => void signKyberReview()}>

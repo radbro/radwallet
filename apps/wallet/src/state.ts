@@ -217,7 +217,15 @@ export async function addCustomNetwork(raw: unknown): Promise<CustomChainConfig>
   const off = customNetworks.value.find((n) => n.enabled === false && n.id === (raw as { id?: unknown } | null)?.id);
   if (off) throw new Error(`that node is ${off.name}, which you switched off. switch it back on below.`);
   const config = registerCustomChain(raw);
-  if (!config) throw new Error('that chain is already built in, already added, or has invalid network details');
+  if (!config) {
+    // the chain id came from the node itself, so a fork of a built-in chain
+    // lands here as that chain — the fix is its RPC pool, not a new network
+    const id = (raw as { id?: unknown } | null)?.id;
+    const known = typeof id === 'number' ? CHAINS[id] : undefined;
+    if (known && customNetworks.value.some((n) => n.id === id)) throw new Error('you already added that network');
+    if (known) throw new Error(`that node is ${known.name}, which is built in. add it under RPC POOL instead.`);
+    throw new Error('those network details are not valid');
+  }
   customNetworks.value = [...customNetworks.value, config];
   poolsAll.value = {
     ...poolsAll.value,
@@ -256,7 +264,7 @@ export async function removeCustomNetwork(id: number): Promise<void> {
   poolsAll.value = nextPools;
   await persistPrefs();
   if (wasSelected) publishWalletChainSelection(chainId.value);
-  say(`${network.name} removed from this wallet.`);
+  say(`${network.name} removed.`);
   tickBlocks();
   void refresh();
 }
@@ -511,10 +519,10 @@ export function hush(): void {
 }
 
 /**
- * Every way the keys can go away lands here: the auto-lock timer, and the
- * background being torn down under us (MV3 idles it out, an add-on reload
- * restarts it). Showing an unlocked wallet that cannot sign anything is a lie,
- * so the screen goes where the truth is.
+ * Every way the session can end lands here: the auto-lock timer, LOCK in
+ * another window, or a browser or add-on restart that clears the encrypted
+ * session envelope. Showing an unlocked wallet that cannot sign anything is a
+ * lie, so the screen goes where the truth is.
  */
 function dropToUnlock(why: string): void {
   if (screen.value === 'unlock' || screen.value === 'welcome' || screen.value === 'loading') return;
@@ -628,14 +636,14 @@ export function sayError(e: unknown): void {
   // is how a person concludes their funds are gone and starts typing their seed
   // phrase into whatever asks for it.
   if (msg === 'VAULT_UNSUPPORTED') {
-    say('this vault was written by a newer radwallet. update the wallet — your password is fine.');
+    say('this version of radwallet cannot open your saved wallet. update radwallet and try again.');
     return;
   }
-  if (msg === 'VAULT_CORRUPT') { say('the vault file is damaged. restore using your backed-up seed phrases and imported private keys.'); return; }
+  if (msg === 'VAULT_CORRUPT') { say('saved wallet data is damaged. restore from your seed phrases and imported keys.'); return; }
   // a cancelled fingerprint prompt is a decision, not a failure — say nothing
   if (msg === 'BIOMETRIC_CANCELLED') return;
   if (msg === 'BIOMETRIC_KEY_GONE') {
-    say('a new fingerprint or face was added to this phone, so biometric unlock was switched off. your password still works.');
+    say('biometric unlock is off: the fingerprints or face on this phone changed. your password still works.');
     return;
   }
   say(msg);
@@ -732,7 +740,7 @@ function migratePools(raw: unknown): Record<number, RpcPoolState> {
     storage.get('selectedAddress'),
     storage.get('portfolioSettings'),
     loadAddressBook().catch(() => { say('address book could not be loaded'); }),
-    loadWalletList().catch(() => { say('wallet list layout could not be loaded'); }),
+    loadWalletList().catch(() => { say('saved wallet order could not be loaded. showing the default order.'); }),
   ]);
   // read BEFORE applyStatus, which is what turns it back into an index
   wantedAddress = (sel ?? '').toLowerCase();
@@ -763,7 +771,7 @@ function migratePools(raw: unknown): Record<number, RpcPoolState> {
   // the copy before the last write, and saying nothing here would let someone
   // keep using a wallet that is quietly one write out of date
   if (v.recovered) {
-    say('the stored vault was unreadable — restored the previous copy. a wallet added in the last write may be missing.');
+    say('saved wallet data was damaged. loaded the copy from before your last change — redo that change if it is missing.');
   }
 
   // the background session may already be unlocked (extension)
@@ -849,7 +857,7 @@ export function setChain(id: number): void {
   chainId.value = id;
   void persistPrefs();
   publishWalletChainSelection(id);
-  say(`network: ${CHAINS[id].name}. same rules everywhere.`);
+  say(`network: ${CHAINS[id].name}.`);
   tickBlocks();
   void refresh();
 }
@@ -867,7 +875,7 @@ export function switchChain(dir: 1 | -1): void {
   chainId.value = CHAIN_IDS[(i + dir + CHAIN_IDS.length) % CHAIN_IDS.length];
   void persistPrefs();
   publishWalletChainSelection(chainId.value);
-  say(`network: ${CHAINS[chainId.value].name}. same rules everywhere.`);
+  say(`network: ${CHAINS[chainId.value].name}.`);
   tickBlocks();
   void refresh();
 }
@@ -1020,7 +1028,15 @@ export async function disableBiometrics(): Promise<void> {
 export async function unlockWithBiometrics(): Promise<void> {
   const sealed = bioSealed.value;
   if (!sealed) throw new Error('biometric unlock is not set up');
-  const password = await biometricUnlock(sealed);
+  let password: string;
+  try {
+    password = await biometricUnlock(sealed);
+  } catch (e) {
+    // the keystore key died with a fingerprint change: the seal it guarded can
+    // never open again, so retire it — the toast and SECURITY both say "off"
+    if (e instanceof Error && e.message === 'BIOMETRIC_KEY_GONE') await disableBiometrics().catch(() => {});
+    throw e;
+  }
   await unlock(password);
 }
 
@@ -1059,7 +1075,7 @@ export async function addSeed(mnemonic: string, nick?: string): Promise<void> {
     const added = accounts.value[accounts.value.length - 1];
     if (added) await forgetWalletGroupLayout(added.groupId).catch(sayError);
     selectAccount(accounts.value.length - 1);
-    say('seed phrase added. it lives in the same vault, under the same password.');
+    say('seed phrase added.');
   } finally {
     busy.value = null;
   }
@@ -1315,7 +1331,7 @@ export async function refresh(): Promise<void> {
     sweepErrors.value = errs;
     liveAddress = acct.address;
     if (Object.keys(errs).length === scan.length) {
-      say('every RPC is unreachable — try other endpoints in SETTINGS → NETWORKS');
+      say('no node answered on any chain. check your connection, or add your own node in SETTINGS → NETWORKS.');
     } else {
       persistBalances(acct.address);
     }
@@ -1417,7 +1433,7 @@ export async function refresh(): Promise<void> {
     if (!stillCurrent()) return; // superseded mid-scan
     nfts.value = rs.flatMap((r) => (r.status === 'fulfilled' ? r.value : []));
     if (indexerTrouble) {
-      say(`indexer unavailable (${indexerTrouble}) — read the chain directly instead`);
+      say(`indexer failed (${indexerTrouble}). showing the bundled list and your added tokens only.`);
     }
     const failed = rs.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
     nftError.value = failed.length
@@ -1555,10 +1571,11 @@ export const chainErrors = computed(() =>
     .map((id) => ({ chainId: id, name: CHAINS[id].name, error: sweepErrors.value[id] })),
 );
 
-/** how many real chains actually hold something */
+/** how many real chains actually hold something — a zero native row is a
+ *  chain that was checked, not one that holds anything */
 export const chainsHeld = computed(
   () => new Set(balances.value
-    .filter((b) => !CHAINS[b.chainId ?? 1]?.testnet)
+    .filter((b) => b.raw > 0n && !CHAINS[b.chainId ?? 1]?.testnet)
     .map((b) => b.chainId ?? 1)).size,
 );
 
@@ -1600,7 +1617,7 @@ export async function addContract(chainIdIn: number, address: string): Promise<s
     return `${col.name} added — you hold ${col.count}`;
   }
   const tok = await probeToken(ep, chainIdIn, address, acct.address);
-  if (!tok) throw new Error('that contract will not say what it is. not adding it.');
+  if (!tok) throw new Error('could not read that contract as a token. check the address and network, or try again.');
   const have = customTokens.value[chainIdIn] ?? [];
   if (!have.some((t) => t.address.toLowerCase() === tok.token.address.toLowerCase())) {
     customTokens.value = { ...customTokens.value, [chainIdIn]: [...have, tok.token] };

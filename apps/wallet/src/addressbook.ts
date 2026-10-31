@@ -79,10 +79,10 @@ function parseAddressBook(raw: string | null, strict = false): AddressBookContac
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (strict && !Array.isArray(parsed)) throw new Error('address book storage is corrupt');
+    if (strict && !Array.isArray(parsed)) throw new Error('saved addresses are damaged, so this change was not saved');
     return normalizeAddressBookContacts(parsed);
   } catch {
-    if (strict) throw new Error('address book storage is corrupt');
+    if (strict) throw new Error('saved addresses are damaged, so this change was not saved');
     return [];
   }
 }

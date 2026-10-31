@@ -154,6 +154,8 @@ export function SendSheet() {
   const [prev, setPrev] = useState<TxPreview | null>(null);
   const [sim, setSim] = useState(false);
   const [sending, setSending] = useState(false);
+  // a stealth send spends ~15 minutes waiting for finality after its broadcast
+  const [waitingFinal, setWaitingFinal] = useState(false);
   const [sent, setSent] = useState<{ hash: string; chainId: number } | null>(null);
   const [stealthPlan, setStealthPlan] = useState<StealthSendPlanWire | null>(null);
   const [prepared, setPrepared] = useState<{
@@ -289,7 +291,8 @@ export function SendSheet() {
         announceHash,
       });
       await recordTx({ hash: announceHash, chainId: 1, kind: 'stealth', to: 'announcer' });
-      say('announcement broadcast; verifying its receipt and waiting for Ethereum finality before ETH can move. this can take about 15 minutes.');
+      say('announcement sent. ETH moves once Ethereum finalizes it, in about 15 minutes. keep this open, or finish it later in ACTIVITY.');
+      setWaitingFinal(true);
       try {
         await session.confirmStealthAnnouncement(ep, announceHash, stealthPlan);
       } catch (e) {
@@ -305,9 +308,10 @@ export function SendSheet() {
           transferError: confirmationError,
         });
         setSent({ hash: announceHash, chainId: 1 });
-        say(`announcement is not finalized; ETH did not move. Activity can recheck it: ${confirmationError}`);
+        say(`ETH has not moved: ${confirmationError}. finish it in ACTIVITY.`);
         return;
       }
+      setWaitingFinal(false);
       try {
         const transferHash = await session.transferStealthPlan(activeAccount.index, ep, stealthPlan, announceHash);
         await savePendingStealthSend({
@@ -337,14 +341,15 @@ export function SendSheet() {
           transferError,
         });
         setSent({ hash: announceHash, chainId: 1 });
-        say(`announcement succeeded; ETH did not move. Activity can retry transfer: ${transferError}`);
+        say(`the announcement went through, the ETH transfer did not: ${transferError}. retry it in ACTIVITY.`);
       }
     } catch (e) {
-      if (pendingId) {
-        say('stealth send did not move ETH. Activity keeps the recovery plan.');
-      }
-      sayError(e);
+      // one toast: a second say() would replace this one in the same tick
+      const msg = e instanceof Error ? e.message.split('\n')[0] : String(e);
+      if (pendingId && msg !== 'locked') say(`stealth send stopped before ETH moved: ${msg}. finish it in ACTIVITY.`);
+      else sayError(e);
     } finally {
+      setWaitingFinal(false);
       setSending(false);
     }
   }
@@ -516,8 +521,8 @@ export function SendSheet() {
                   <div class="panel">
                     <div class="hd">STEALTH SEND (ERC-5564)</div>
                     <div style={{ fontSize: 12 }}>
-                      two transactions: announcement to the canonical registry first, then ETH to a
-                      freshly derived one-time address.
+                      two transactions: a public announcement, then the ETH to a new one-time
+                      address once Ethereum finalizes it, about 15 minutes later.
                     </div>
                   </div>
                 )}
@@ -560,7 +565,7 @@ export function SendSheet() {
                       REFUSE
                     </button>
                     <button class="btn" disabled={sending || !valid} onClick={() => void (isStealth ? fireStealth() : fireIt())}>
-                      {sending ? '[ BROADCASTING ]' : 'SIGN & SEND'}
+                      {sending ? (waitingFinal ? '[ WAITING ~15 MIN ]' : '[ BROADCASTING ]') : 'SIGN & SEND'}
                     </button>
                   </div>
                 )}

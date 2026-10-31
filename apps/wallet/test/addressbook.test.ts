@@ -85,7 +85,7 @@ test('address book tolerates corrupt reads but refuses to overwrite corrupt stor
   await addressbook.loadAddressBook();
 
   assert.deepEqual(addressbook.savedContacts.value, []);
-  await assert.rejects(addressbook.saveContact(ONE, 'Alice'), /storage is corrupt/);
+  await assert.rejects(addressbook.saveContact(ONE, 'Alice'), /saved addresses are damaged/);
   assert.equal(local.getItem('addressBook'), 'not json');
   assert.deepEqual(addressbook.savedContacts.value, []);
 });

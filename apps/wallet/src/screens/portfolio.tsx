@@ -165,7 +165,7 @@ function PortfolioFilters({ onClose }: { onClose: () => void }) {
           const ids = group.members.map((a) => a.address.toLowerCase());
           const included = ids.filter((id) => !settings.excludedWallets.includes(id)).length;
           return <section class="portfolio-filter-group" key={group.id}>
-            <CheckRow label={`Include seed group ${group.label}`} title={group.label}
+            <CheckRow label={`Include ${group.label}`} title={group.label}
               detail={`${included}/${ids.length} wallets${group.kind === 'imported' ? ' · imported keys' : ''}`}
               checked={included === ids.length} mixed={included > 0 && included < ids.length}
               onChange={() => toggle('excludedWallets', ids)} />
@@ -265,7 +265,8 @@ export function Portfolio() {
           {view.unpricedAssetCount > 0 && <span>{view.unpricedAssetCount} unpriced assets <button class="act" aria-expanded={reviewUnpriced}
             onClick={() => setReviewUnpriced(!reviewUnpriced)}>Review</button></span>}
           <small role="status">{refreshing ? `Refreshing ${walletValueProgress.value ?? ''}`
-            : !loaded ? 'No snapshot yet' : portfolioStale.value ? 'Balances changed · refresh'
+            : !loaded ? 'No snapshot yet' : portfolioStale.value
+              ? (Object.keys(portfolioErrors.value).length ? 'Some reads failed · refresh to retry' : 'Balances changed · refresh')
             : `Updated ${new Date(portfolioUpdatedAt.value!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</small>
         </div>
       </footer>

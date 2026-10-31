@@ -123,7 +123,7 @@ test('keyring: private keys normalize, validate, and reject garbage', () => {
   assert.equal(normalizePrivateKey(`  ${TEST_PRIV.toUpperCase()} `), TEST_PRIV);
   assert.equal(addressOfPrivateKey(TEST_PRIV), TEST_ADDR0);
   assert.throws(() => normalizePrivateKey('0xdeadbeef'), /32-byte/);
-  assert.throws(() => normalizePrivateKey(`0x${'0'.repeat(64)}`), /curve/);
+  assert.throws(() => normalizePrivateKey(`0x${'0'.repeat(64)}`), /not a valid private key/);
 });
 
 test('keyring: seed groups and loose keys share one flat index space', () => {

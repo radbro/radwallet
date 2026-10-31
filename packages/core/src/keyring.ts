@@ -96,7 +96,7 @@ export function normalizePrivateKey(input: string): `0x${string}` {
   try {
     privateKeyToAccount(key);
   } catch {
-    throw new Error('that key is not on the curve, bro');
+    throw new Error('that is not a valid private key, bro');
   }
   return key;
 }
@@ -222,7 +222,7 @@ export function accountAt(secret: VaultSecret, index: number): SignerAccount {
     i -= seed.accounts.length;
   }
   const k = s.imported[i];
-  if (!k) throw new Error(`no account at index ${index}`);
+  if (!k) throw new Error(`no wallet at index ${index}`);
   return privateKeyToAccount(k.privateKey);
 }
 
@@ -312,7 +312,7 @@ export function addImportedKey(secret: VaultSecret, privateKey: string, nick?: s
   const key = normalizePrivateKey(privateKey);
   const addr = addressOfPrivateKey(key).toLowerCase();
   if (listAccounts(s).some((a) => a.address.toLowerCase() === addr)) {
-    throw new Error('that account is already in this wallet');
+    throw new Error('you already have that wallet');
   }
   const k: ImportedKey = {
     id: nextId('key', s.imported.map((x) => x.id)),
@@ -342,7 +342,7 @@ export function editAccount(secret: VaultSecret, index: number, patch: AccountMe
   });
   if (i < 0) return { ...s, seeds };
   const at = i;
-  if (!s.imported[at]) throw new Error(`no account at index ${index}`);
+  if (!s.imported[at]) throw new Error(`no wallet at index ${index}`);
   return { ...s, seeds, imported: s.imported.map((k, j) => (j === at ? { ...k, ...clean(patch) } : k)) };
 }
 

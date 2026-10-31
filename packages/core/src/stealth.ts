@@ -422,7 +422,7 @@ export async function confirmStealthAnnouncementWithClient(
       verifyStealthAnnouncement(plan, announceHash, tx, receipt);
       const canonicalBlock = await c.getBlock({ blockNumber: receipt.blockNumber });
       if (!canonicalBlock.hash || !sameHex(canonicalBlock.hash, receipt.blockHash)) {
-        throw new Error('stealth announcement receipt is not in the canonical chain');
+        throw new Error('its block was replaced on the chain');
       }
       // The exact tx can be re-included at a later height after a reorg. That
       // new block must itself become finalized before this function returns.
@@ -430,7 +430,7 @@ export async function confirmStealthAnnouncementWithClient(
       if (currentFinalized.number !== null && currentFinalized.number >= receipt.blockNumber) return;
     }
     if (Date.now() >= deadline) {
-      throw new Error('stealth announcement was mined but did not finalize before the safety timeout');
+      throw new Error('Ethereum did not finalize it in time');
     }
     await new Promise<void>((resolve) => setTimeout(resolve, STEALTH_FINALITY_POLL_MS));
   }

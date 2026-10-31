@@ -259,7 +259,11 @@ export async function verifyCollectionTokenIdWithClient(
     allowFailure: true,
     contracts: [{ address: holding.address, abi, functionName: 'ownerOf', args: [BigInt(id)] } as const],
   })).map(nftCallResult);
-  if (ownerOf?.status !== 'success' || String(ownerOf.result).toLowerCase() !== owner.toLowerCase()) {
+  // a failed read is "could not look", never "you do not own it"
+  if (ownerOf?.status !== 'success') {
+    throw new Error('could not read that token ID: it may not exist, or the node did not answer');
+  }
+  if (String(ownerOf.result).toLowerCase() !== owner.toLowerCase()) {
     throw new Error('that token ID is not owned by this wallet');
   }
   const tokenUris = await tokenUrisForIds(c, holding.address, [id]);

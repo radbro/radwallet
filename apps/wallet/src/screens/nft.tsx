@@ -248,7 +248,7 @@ export function NftSheet() {
                       class="uri" href={uri} title={uri}
                       target="_blank" rel="noreferrer noopener"
                     >{uri.length > 46 ? `${uri.slice(0, 44)}…` : uri} ↗</a>
-                    : <span class="note">no tokenURI</span>}
+                    : <span class="note">no metadata link</span>}
                 </div>
                 <button
                   class="btn ghost nftsend"

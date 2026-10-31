@@ -92,7 +92,7 @@ function AddWallet({ onClose }: { onClose: () => void }) {
     return (
       <div class="addmenu">
         <button class="btn block" onClick={() => setMode('create')}>
-          CREATE ANOTHER ADDRESS
+          CREATE ANOTHER WALLET
         </button>
         <button class="btn ghost block" onClick={() => { setMode('seed'); setText(''); setNick(''); }}>
           IMPORT A SEED PHRASE
@@ -108,18 +108,18 @@ function AddWallet({ onClose }: { onClose: () => void }) {
   if (mode === 'create') {
     return (
       <div class="panel addform">
-        <div class="hd">CREATE ANOTHER ADDRESS</div>
+        <div class="hd">CREATE ANOTHER WALLET</div>
         {targetSeed ? (
           <>
             <label class="row">
               <span>Use seed phrase</span>
               <select class="netsel wide" style={{ minHeight: 'var(--tap-size, 44px)', background: '#000', color: 'var(--yl)', font: 'inherit' }}
-                aria-label="seed phrase for new address" value={targetSeed.id}
+                aria-label="seed phrase for new wallet" value={targetSeed.id}
                 disabled={working} onChange={(e) => setSeedId((e.target as HTMLSelectElement).value)}>
                 {seedGroups.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
               </select>
             </label>
-            <div class="note">The new address is backed up by this same seed phrase. No new phrase is created.</div>
+            <div class="note">The new wallet is backed up by this same seed phrase. No new phrase is created.</div>
             <div class="btnrow">
               <button class="btn ghost" disabled={working} onClick={() => setMode('menu')}>BACK</button>
               <button class="btn" disabled={working} onClick={() => {
@@ -129,14 +129,14 @@ function AddWallet({ onClose }: { onClose: () => void }) {
                 void guard(async () => {
                   await addAccount(targetSeed.id);
                   onClose();
-                  say(`new address created under ${targetSeed.label}. the same seed phrase backs it up.`);
+                  say(`new wallet added under ${targetSeed.label}. the same seed phrase backs it up.`);
                 }).finally(() => { workingRef.current = false; setWorking(false); });
-              }}>{working ? 'CREATING…' : 'CREATE ADDRESS'}</button>
+              }}>{working ? 'CREATING…' : 'CREATE WALLET'}</button>
             </div>
           </>
         ) : (
           <>
-            <div class="note">Imported private keys each control one address. Import a seed phrase first to create another address from it.</div>
+            <div class="note">An imported key is one wallet and cannot make more. Import a seed phrase to create more wallets from it.</div>
             <div class="btnrow">
               <button class="btn ghost" onClick={() => setMode('menu')}>BACK</button>
               <button class="btn" onClick={() => { setMode('seed'); setText(''); setNick(''); }}>IMPORT SEED PHRASE</button>
@@ -156,7 +156,7 @@ function AddWallet({ onClose }: { onClose: () => void }) {
       <div class="note">
         {isSeed
           ? 'an existing seed phrase, sealed into the same vault under the same password.'
-          : 'a raw 32-byte key, sealed into the same vault under the same password. your seed phrase cannot restore it — it was never derived from those words — so keep the original. no stealth address either.'}
+          : 'a private key, saved under the same password. your seed phrase cannot restore it — keep your own copy. no stealth address.'}
       </div>
       <textarea
         class="field" placeholder={isSeed ? 'seed phrase…' : '0x…'} value={text}
@@ -471,14 +471,14 @@ function WalletBackups({ armed, setArmed }: {
 }) {
   return (
     <>
-      <div class="note">A seed phrase restores every address created from it. Imported private keys need separate backups. Your vault password alone cannot restore either.</div>
+      <div class="note">A seed phrase restores every wallet created from it. Imported keys need separate backups. Your vault password alone cannot restore either.</div>
       {groups.value.filter((g) => g.kind === 'seed').map((g) => (
         <div class="panel backup-group" key={g.id}>
           <div class="hd">{g.label}</div>
           <div class="note">{g.members.length} wallet{g.members.length === 1 ? '' : 's'} · one seed phrase</div>
           <Reveal
             label="BACK UP SEED PHRASE"
-            warning={`the seed phrase for ${g.label} restores every wallet in this group, including addresses you add later. anyone with it can spend their funds.`}
+            warning={`the seed phrase for ${g.label} restores every wallet in this group, including wallets you add later. anyone with it can spend their funds.`}
             armed={armed === `backup-phrase:${g.id}`}
             onArm={() => setArmed(armed === `backup-phrase:${g.id}` ? null : `backup-phrase:${g.id}`)}
             load={(pw) => revealPhrase(g.id, pw)}
@@ -791,7 +791,8 @@ export function WalletPicker() {
                       <>
                         <span class="sep">·</span>
                         <Forget
-                          what={`${g.label} and its ${g.members.length} wallet(s) — you need the phrase written down to get back in`}
+                          what={`${g.label} and its ${g.members.length} wallet${g.members.length === 1 ? '' : 's'}`}
+                          warning="you need this seed phrase written down to get them back."
                           armed={groupArmed}
                           onArm={() => setArmed(groupArmed ? null : `group:${g.id}`)}
                           onDo={() => { setArmed(null); setOpenGroup(null); void guard(() => forgetGroup(g.id)); }}

@@ -94,5 +94,5 @@ export async function executeBestRoute(
 ): Promise<`0x${string}`> {
   if (route.best === 'v4' && route.v4) return swapEthToRadV4(endpoint, account, route.v4);
   if (route.best === 'v3' && route.v3) return swapEthToRad(endpoint, account, route.v3);
-  throw new Error('no route available — is the RPC reachable?');
+  throw new Error('no ETH → $RAD route right now. nothing was sent.');
 }

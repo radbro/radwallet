@@ -113,7 +113,7 @@ export function TokenPicker({
     lookupContract(addr)
       .then((item) => {
         if (!live || seq !== lookupSeq.current) return;
-        if (!item) setContractError('that contract will not say what it is');
+        if (!item) setContractError('could not read that contract as a token');
         else if (item.address?.toLowerCase() === addr.toLowerCase()) {
           setResolved({ item, chain, lookup: lookupContract });
         } else setContractError('the contract response did not match the address');

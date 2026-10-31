@@ -63,7 +63,7 @@ export function Nfts() {
                 <span class="nftids">
                   {n.tokenIds.length
                     ? `#${n.tokenIds.slice(0, 3).join(' #')}${n.count > n.tokenIds.length ? ` +${n.count - n.tokenIds.length}` : ''}`
-                    : 'ids not enumerable on-chain'}
+                    : 'ids not found — open to check one'}
                 </span>
               </span>
               <span class="amt">{n.count} ›</span>

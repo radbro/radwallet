@@ -129,7 +129,7 @@ async function openApproval(browser, decimals, options = {}) {
       await page.getByText('WHO IS ASKING', { exact: true }).waitFor();
     } else {
       await input.waitFor();
-      await page.getByRole('status').filter({ hasText: 'Checking token decimals' }).waitFor();
+      await page.getByRole('status').filter({ hasText: "Checking the token's decimals" }).waitFor();
       assert.equal(await sign.isEnabled(), false, 'signing must wait for token metadata');
     }
   } catch (error) {
@@ -229,7 +229,7 @@ async function waitEnabled(page, button) {
     const missing = await openApproval(browser, null);
     try {
       missing.metadata.resolve();
-      await missing.page.getByRole('status').filter({ hasText: 'Could not read token decimals' }).waitFor();
+      await missing.page.getByRole('status').filter({ hasText: "Could not read this token's decimals" }).waitFor();
       assert.equal(await missing.sign.isEnabled(), false);
       await missing.input.fill('100');
       assert.equal(await missing.sign.isEnabled(), false, 'missing metadata must never fall back to 18 decimals');

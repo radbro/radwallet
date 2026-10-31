@@ -61,7 +61,7 @@ function Rescue({ entry, onDone }: { entry: HistoryEntry; onDone: () => void }) 
     try {
       const ep = endpointForChain(entry.chainId);
       const tx = await fetchTx(ep, entry.chainId, entry.hash as `0x${string}`);
-      if (!tx) throw new Error('the network has never heard of this transaction');
+      if (!tx) throw new Error('could not find this transaction: it may have been replaced or dropped, or the node did not answer. nothing was sent.');
       if (!isReplaceable(tx)) {
         await updateStatus(entry.hash, 'confirmed');
         say('too late — it is already in a block. nothing was sent.');
@@ -165,7 +165,7 @@ function StealthInbox() {
   async function finishStealthSend(p: StoredStealthSend) {
     try {
       if (p.from.toLowerCase() !== acct!.address.toLowerCase()) {
-        throw new Error('stealth recovery belongs to a different account');
+        throw new Error('this stealth send belongs to a different wallet');
       }
       if (!p.plan.from || p.plan.from.toLowerCase() !== p.from.toLowerCase()) {
         throw new Error('stealth recovery plan is not bound to its stored sender');
@@ -191,7 +191,7 @@ function StealthInbox() {
         await savePendingStealthSend(announced);
         await recordTx({ hash: announceHash, chainId: 1, kind: 'stealth', to: 'announcer' });
       }
-      say('checking the exact announcement and waiting for finality before ETH can move.');
+      say('checking the announcement. ETH moves once Ethereum finalizes it, in about 15 minutes. keep this open.');
       try {
         await session.confirmStealthAnnouncement(ep, announceHash, p.plan);
       } catch (e) {
@@ -280,7 +280,7 @@ function StealthInbox() {
       </button>
       {scanned && found.length === 0 && (
         <div class="note" style={{ marginTop: 6 }}>
-          no stealth payments found in the scanned announcement range.
+          no stealth payments found.
         </div>
       )}
       {found.map((p) => (
@@ -324,7 +324,7 @@ export function Activity() {
       <StealthInbox />
 
       <div class="testhead">TRANSACTION HISTORY · SAVED ON THIS DEVICE</div>
-      <div class="note">transactions are public on-chain. this list shows the latest 100 transactions recorded here across your wallets; earlier activity and incoming transfers may not appear.</div>
+      <div class="note">transactions sent from this device, latest 100. incoming transfers are not listed.</div>
 
       {entries.length === 0 && (
         <div class="panel" style={{ marginTop: 14 }}>

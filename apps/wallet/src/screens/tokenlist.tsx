@@ -46,7 +46,7 @@ export function TokenListSheet() {
         <div class="drawerbody">
           {failed && (
             <div class="note red">
-              {failed} — check the contract address and selected network.
+              {failed}
             </div>
           )}
           <div class="chips filterrow">

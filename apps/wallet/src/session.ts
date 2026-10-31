@@ -379,7 +379,7 @@ class LocalSession implements WalletSession {
 }
 
 export const STEALTH_REFUSAL =
-  'this is a loose private key — stealth addresses come from a seed phrase. use a seed wallet.';
+  'imported keys have no stealth address. use a wallet from a seed phrase.';
 
 export function wirePayments(
   found: Array<{ stealthAddress: `0x${string}`; ephemeralPubKey: `0x${string}`; blockNumber: bigint; balanceEth: string }>,
@@ -609,7 +609,7 @@ class RemoteSession implements WalletSession {
   }
   private async accountAddress(index: number): Promise<`0x${string}`> {
     const acct = (await this.status()).accounts[index];
-    if (!acct) throw new Error('account not found');
+    if (!acct) throw new Error('wallet not found');
     return acct.address;
   }
   async announceStealthPlan(index: number, endpoint: string, plan: StealthSendPlanWire): Promise<`0x${string}`> {

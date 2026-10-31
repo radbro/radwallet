@@ -1,6 +1,6 @@
 import { useState } from 'preact/hooks';
 import {
-  screen, createWallet, importWallet, importKeyAsWallet, unlock, say, DEMO, sayError,
+  screen, createWallet, importWallet, importKeyAsWallet, unlock, DEMO, sayError,
   bioSealed, bioReady, unlockWithBiometrics, bootFailed,
 } from '../state.js';
 import { LOGO } from '../assets.js';
@@ -35,7 +35,7 @@ export function Loading() {
     <div class="content booting" role="status">
       <div class="simhead">[ LOADING INTENSIFIES ]<span class="bootcursor" aria-hidden="true">█</span></div>
       <div class="note center bootslow">
-        still waking up. a wallet the browser put to sleep takes a few seconds.
+        still loading. this can take a few seconds.
       </div>
     </div>
   );
@@ -125,7 +125,8 @@ export function Create() {
       */}
       <form class="pwform" onSubmit={async (e) => {
         e.preventDefault();
-        if (pw.length >= MIN_VAULT_PASSWORD_CHARS && pw === pw2) setSeed(await createWallet(pw));
+        if (pw.length < MIN_VAULT_PASSWORD_CHARS || pw !== pw2) return;
+        try { setSeed(await createWallet(pw)); } catch (err) { sayError(err); }
       }}>
         <input
           class="field" type="password" name="password" autocomplete="new-password"
@@ -169,7 +170,7 @@ export function Import() {
       <div class="note center">
         {isSeed
           ? '12/24-word BIP-39 seed phrase. It never leaves this device.'
-          : 'a raw 32-byte private key. one address, no derivation, no stealth address — and nothing else backs it up.'}
+          : 'a private key. one wallet, no stealth address. keep your own copy — no seed phrase can restore it.'}
       </div>
       <textarea class="field" placeholder={isSeed ? 'seed phrase…' : '0x…'}
         value={words} onInput={(e) => setWords((e.target as HTMLTextAreaElement).value)} />
@@ -210,7 +211,9 @@ export function Unlock() {
           handler of our own — the browser has always done that part */}
       <form class="pwform" onSubmit={async (e) => {
         e.preventDefault();
-        try { await unlock(pw); } catch { say('wrong password, bro'); }
+        // sayError says 'wrong password' only for a wrong password: a vault
+        // from a newer RADWALLET must not read as a lost wallet
+        try { await unlock(pw); } catch (err) { sayError(err); }
       }}>
         <input
           class="field" type="password" name="password" autocomplete="current-password"

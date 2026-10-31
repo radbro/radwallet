@@ -631,6 +631,7 @@ label.row input:disabled + span{color:#9c9c9c}
 .portfolio-scope{display:flex; align-items:center; justify-content:space-between; gap:6px; flex-shrink:0;
   border-bottom:1px solid #333; padding:3px 0; color:#aaa; font-size:12px}
 .portfolio-scope > span{min-width:0; overflow-wrap:anywhere}
+.portfolio-scope > .portfolio-scope-actions{display:flex; align-items:center; gap:4px; flex-shrink:0}
 .portfolio-scope .btn{font:12px 'Courier New',monospace; padding:0 8px;
   min-height:var(--tap-size,44px); flex-shrink:0}
 .portfolio-grouping,.portfolio-filter-tabs{display:flex; flex-shrink:0; border-bottom:1px solid #333}

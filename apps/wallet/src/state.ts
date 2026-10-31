@@ -1781,138 +1781,149 @@ export async function valueAllWallets(): Promise<void> {
   }
   if (valuingWallets.value || accounts.value.length === 0) return;
   valuingWallets.value = true;
-  const epoch = portfolioEpoch;
-  portfolioStale.value = true;
-  const snapshotAccounts = uniqueAccountsForPortfolio(accounts.value);
-  walletValueProgress.value = `0/${snapshotAccounts.length}`;
   try {
-    if (usdRate.value === null) {
-      usdRate.value = await readUsdRate();
-    }
-    if (!portfolioSnapshotFresh(epoch)) return;
-    const snapshots: WalletSweepSnapshot[] = [];
-    const concurrency = 2;
-    for (let start = 0; start < snapshotAccounts.length; start += concurrency) {
-      const batch = await Promise.all(snapshotAccounts.slice(start, start + concurrency).map(async (a) => ({
-        account: a,
-        sweeps: await sweepChains(
-          (id) => {
-            const p = poolsAll.value[id] ?? { endpoints: [...CHAINS[id].defaultEndpoints], epoch: 0 };
-            const pinned = endpointFor(p, a.address);
-            return [pinned, ...p.endpoints.filter((e) => e !== pinned)];
-          },
-          a.address,
-          // the standing list, never scanChains: test ETH is not money
-          SCAN_CHAIN_IDS,
-          customTokens.value,
-        ).catch((error) => SCAN_CHAIN_IDS.map((id) => ({
-          chainId: id,
-          balances: [],
-          error: (error as Error).message.split('\n')[0],
-        }))),
-      })));
-      if (!portfolioSnapshotFresh(epoch)) return;
-      snapshots.push(...batch);
-      walletValueProgress.value = `${snapshots.length}/${snapshotAccounts.length}`;
-    }
-
-    walletValueProgress.value = 'PRICING';
-    const priced = await valueWalletSnapshots(
-      snapshots.map((snapshot) => ({
-        address: snapshot.account.address,
-        chains: snapshot.sweeps.map((sweep) => ({
-          chainId: sweep.chainId,
-          holdings: sweep.balances,
-        })),
-      })),
-      async (id, tokens) => {
-        const p = poolsAll.value[id] ?? { endpoints: [...CHAINS[id].defaultEndpoints], epoch: 0 };
-        return withFailover(
-          p.endpoints,
-          (ep) => spotPricesInEth(ep, id, tokens, { throwOnRpcError: true }),
-        ).catch(() => new Map());
-      },
-    );
-    if (!portfolioSnapshotFresh(epoch)) return;
-
-    const errors: Record<string, string> = {};
-    for (const snapshot of snapshots) {
-      for (const sweep of snapshot.sweeps) {
-        if (sweep.error) {
-          const chain = CHAINS[sweep.chainId]?.name ?? `chain ${sweep.chainId}`;
-          errors[portfolioErrorKey(snapshot.account.address, sweep.chainId)] =
-            `${snapshot.account.label} · ${chain}: ${sweep.error}`;
-        }
-      }
-    }
-
-    const freshHoldings = snapshots.flatMap((snapshot) => holdingsFromSnapshot(snapshot, priced.pricesByChain));
-    const failedWalletChains = new Set<string>();
-    for (const snapshot of snapshots) {
-      for (const sweep of snapshot.sweeps) {
-        if (sweep.error) failedWalletChains.add(portfolioErrorKey(snapshot.account.address, sweep.chainId));
-      }
-    }
-    const scannedWallets = new Set(snapshotAccounts.map((a) => a.address.toLowerCase()));
-    const retainedHoldings = portfolioHoldings.value.filter((h) =>
-      scannedWallets.has(h.walletAddress.toLowerCase()) &&
-      failedWalletChains.has(portfolioErrorKey(h.walletAddress, h.chainId ?? 1)));
-    const nextHoldings = [...freshHoldings, ...retainedHoldings];
-    portfolioHoldings.value = nextHoldings;
-    portfolioUpdatedAt.value = Date.now();
-    portfolioErrors.value = errors;
-    portfolioStale.value = Object.keys(errors).length > 0;
-
-    const nextWalletValues = { ...walletValues.value };
-    for (const a of snapshotAccounts) {
-      const lower = a.address.toLowerCase();
-      const attempted = snapshots.find((snapshot) => snapshot.account.address.toLowerCase() === lower);
-      const anySuccess = attempted?.sweeps.some((sweep) => !sweep.error) ?? false;
-      const hasRetained = retainedHoldings.some((h) => h.walletAddress.toLowerCase() === lower);
-      if (!anySuccess && !hasRetained) {
-        delete nextWalletValues[a.address];
-        continue;
-      }
-      nextWalletValues[a.address] = nextHoldings
-        .filter((h) => h.walletAddress.toLowerCase() === lower)
-        .reduce((total, h) => total + (h.ethValue ?? 0), 0);
-    }
-    walletValues.value = nextWalletValues;
-
-    // Refresh-all already swept the selected wallet. Publish that snapshot to
-    // HOME instead of immediately asking every chain for it a second time.
-    const current = account.value;
-    const selectedSnapshot = current
-      ? snapshots.find((snapshot) => snapshot.account.address === current.address)
-      : undefined;
-    if (current && selectedSnapshot) {
-      const selectedErrors: Record<number, string> = {};
-      for (const sweep of selectedSnapshot.sweeps) {
-        if (sweep.error) selectedErrors[sweep.chainId] = sweep.error;
-      }
-      const kept = balances.value.filter((b) => selectedErrors[b.chainId ?? 1] !== undefined);
-      balances.value = [...selectedSnapshot.sweeps.flatMap((sweep) => sweep.balances), ...kept];
-      sweepErrors.value = selectedErrors;
-      const per: Record<string, number> = {};
-      for (const sweep of selectedSnapshot.sweeps) {
-        if (sweep.error) continue;
-        for (const value of valueWithPrices(
-          sweep.chainId,
-          sweep.balances,
-          priced.pricesByChain.get(sweep.chainId) ?? new Map(),
-        )) {
-          if (value.ethValue !== null) per[assetKey(value.chainId, value.address)] = value.ethValue;
-        }
-      }
-      assetEth.value = per;
-      portfolioEth.value = nextWalletValues[current.address] ?? null;
-      liveAddress = current.address;
-      persistBalances(current.address);
+    // A balance change mid-run (focus, a confirmed transaction, HOME's own
+    // sweep) discards the run so it cannot publish old numbers. Start over
+    // rather than leaving a stale snapshot nobody asked to keep.
+    for (let attempt = 0; attempt < 3 && accounts.value.length > 0; attempt++) {
+      if (await valueAllWalletsOnce()) return;
     }
   } finally {
     walletValueProgress.value = null;
     valuingWallets.value = false;
   }
+}
+
+/** one valuation pass; false when a newer balance change made it stale */
+async function valueAllWalletsOnce(): Promise<boolean> {
+  const epoch = portfolioEpoch;
+  portfolioStale.value = true;
+  const snapshotAccounts = uniqueAccountsForPortfolio(accounts.value);
+  walletValueProgress.value = `0/${snapshotAccounts.length}`;
+  if (usdRate.value === null) {
+    usdRate.value = await readUsdRate();
+  }
+  if (!portfolioSnapshotFresh(epoch)) return false;
+  const snapshots: WalletSweepSnapshot[] = [];
+  const concurrency = 2;
+  for (let start = 0; start < snapshotAccounts.length; start += concurrency) {
+    const batch = await Promise.all(snapshotAccounts.slice(start, start + concurrency).map(async (a) => ({
+      account: a,
+      sweeps: await sweepChains(
+        (id) => {
+          const p = poolsAll.value[id] ?? { endpoints: [...CHAINS[id].defaultEndpoints], epoch: 0 };
+          const pinned = endpointFor(p, a.address);
+          return [pinned, ...p.endpoints.filter((e) => e !== pinned)];
+        },
+        a.address,
+        // the standing list, never scanChains: test ETH is not money
+        SCAN_CHAIN_IDS,
+        customTokens.value,
+      ).catch((error) => SCAN_CHAIN_IDS.map((id) => ({
+        chainId: id,
+        balances: [],
+        error: (error as Error).message.split('\n')[0],
+      }))),
+    })));
+    if (!portfolioSnapshotFresh(epoch)) return false;
+    snapshots.push(...batch);
+    walletValueProgress.value = `${snapshots.length}/${snapshotAccounts.length}`;
+  }
+
+  walletValueProgress.value = 'PRICING';
+  const priced = await valueWalletSnapshots(
+    snapshots.map((snapshot) => ({
+      address: snapshot.account.address,
+      chains: snapshot.sweeps.map((sweep) => ({
+        chainId: sweep.chainId,
+        holdings: sweep.balances,
+      })),
+    })),
+    async (id, tokens) => {
+      const p = poolsAll.value[id] ?? { endpoints: [...CHAINS[id].defaultEndpoints], epoch: 0 };
+      return withFailover(
+        p.endpoints,
+        (ep) => spotPricesInEth(ep, id, tokens, { throwOnRpcError: true }),
+      ).catch(() => new Map());
+    },
+  );
+  if (!portfolioSnapshotFresh(epoch)) return false;
+
+  const errors: Record<string, string> = {};
+  for (const snapshot of snapshots) {
+    for (const sweep of snapshot.sweeps) {
+      if (sweep.error) {
+        const chain = CHAINS[sweep.chainId]?.name ?? `chain ${sweep.chainId}`;
+        errors[portfolioErrorKey(snapshot.account.address, sweep.chainId)] =
+          `${snapshot.account.label} · ${chain}: ${sweep.error}`;
+      }
+    }
+  }
+
+  const freshHoldings = snapshots.flatMap((snapshot) => holdingsFromSnapshot(snapshot, priced.pricesByChain));
+  const failedWalletChains = new Set<string>();
+  for (const snapshot of snapshots) {
+    for (const sweep of snapshot.sweeps) {
+      if (sweep.error) failedWalletChains.add(portfolioErrorKey(snapshot.account.address, sweep.chainId));
+    }
+  }
+  const scannedWallets = new Set(snapshotAccounts.map((a) => a.address.toLowerCase()));
+  const retainedHoldings = portfolioHoldings.value.filter((h) =>
+    scannedWallets.has(h.walletAddress.toLowerCase()) &&
+    failedWalletChains.has(portfolioErrorKey(h.walletAddress, h.chainId ?? 1)));
+  const nextHoldings = [...freshHoldings, ...retainedHoldings];
+  portfolioHoldings.value = nextHoldings;
+  portfolioUpdatedAt.value = Date.now();
+  portfolioErrors.value = errors;
+  portfolioStale.value = Object.keys(errors).length > 0;
+
+  const nextWalletValues = { ...walletValues.value };
+  for (const a of snapshotAccounts) {
+    const lower = a.address.toLowerCase();
+    const attempted = snapshots.find((snapshot) => snapshot.account.address.toLowerCase() === lower);
+    const anySuccess = attempted?.sweeps.some((sweep) => !sweep.error) ?? false;
+    const hasRetained = retainedHoldings.some((h) => h.walletAddress.toLowerCase() === lower);
+    if (!anySuccess && !hasRetained) {
+      delete nextWalletValues[a.address];
+      continue;
+    }
+    nextWalletValues[a.address] = nextHoldings
+      .filter((h) => h.walletAddress.toLowerCase() === lower)
+      .reduce((total, h) => total + (h.ethValue ?? 0), 0);
+  }
+  walletValues.value = nextWalletValues;
+
+  // Refresh-all already swept the selected wallet. Publish that snapshot to
+  // HOME instead of immediately asking every chain for it a second time.
+  const current = account.value;
+  const selectedSnapshot = current
+    ? snapshots.find((snapshot) => snapshot.account.address === current.address)
+    : undefined;
+  if (current && selectedSnapshot) {
+    const selectedErrors: Record<number, string> = {};
+    for (const sweep of selectedSnapshot.sweeps) {
+      if (sweep.error) selectedErrors[sweep.chainId] = sweep.error;
+    }
+    const kept = balances.value.filter((b) => selectedErrors[b.chainId ?? 1] !== undefined);
+    balances.value = [...selectedSnapshot.sweeps.flatMap((sweep) => sweep.balances), ...kept];
+    sweepErrors.value = selectedErrors;
+    const per: Record<string, number> = {};
+    for (const sweep of selectedSnapshot.sweeps) {
+      if (sweep.error) continue;
+      for (const value of valueWithPrices(
+        sweep.chainId,
+        sweep.balances,
+        priced.pricesByChain.get(sweep.chainId) ?? new Map(),
+      )) {
+        if (value.ethValue !== null) per[assetKey(value.chainId, value.address)] = value.ethValue;
+      }
+    }
+    assetEth.value = per;
+    portfolioEth.value = nextWalletValues[current.address] ?? null;
+    liveAddress = current.address;
+    persistBalances(current.address);
+  }
+  return true;
 }
 
 /** every wallet added up, in ETH */

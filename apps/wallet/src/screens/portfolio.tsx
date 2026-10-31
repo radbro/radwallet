@@ -209,7 +209,9 @@ export function Portfolio() {
   const refreshing = valuingWallets.value;
   const usdUnavailable = settings.currency === 'usd' && usdRate.value === null;
   const filtered = settings.excludedWallets.length + settings.excludedAssets.length + settings.excludedChains.length > 0;
-  useEffect(() => { void valueAllWallets().catch(sayError); }, []);
+  const refreshNow = () => void valueAllWallets().catch(sayError);
+  // keyed on the wallet count: the screen can mount before the session lists them
+  useEffect(refreshNow, [accounts.value.length]);
   const total = !loaded || (!view.hasValue && (view.unpricedAssetCount > 0 || (errors.length > 0 && view.walletCount > 0)))
     ? '—' : valueText(view.totalEth);
   const unpriced = view.holdings.filter((h) => h.ethValue === null && h.raw > 0n);
@@ -223,7 +225,10 @@ export function Portfolio() {
         </div>
       </div>
       <div class="portfolio-scope"><span>{view.walletCount} wallet{view.walletCount === 1 ? '' : 's'} · {view.assetCount} asset{view.assetCount === 1 ? '' : 's'}</span>
-        <button class="btn ghost" aria-label="FILTERS" onClick={() => setFiltersOpen(true)}>FILTERS{filtered ? ' •' : ''}</button>
+        <span class="portfolio-scope-actions">
+          <IconBtn glyph="↻" tip="Refresh portfolio" disabled={refreshing} onClick={refreshNow} />
+          <button class="btn ghost" aria-label="FILTERS" onClick={() => setFiltersOpen(true)}>FILTERS{filtered ? ' •' : ''}</button>
+        </span>
       </div>
       <div class="portfolio-grouping" role="group" aria-label="Portfolio breakdown">
         {GROUPINGS.map(([groupBy, label]) => <button key={groupBy} aria-pressed={settings.groupBy === groupBy}
@@ -259,7 +264,6 @@ export function Portfolio() {
             : !loaded ? 'No snapshot yet' : portfolioStale.value ? 'Balances changed · refresh'
             : `Updated ${new Date(portfolioUpdatedAt.value!).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</small>
         </div>
-        <IconBtn glyph="↻" tip="Refresh portfolio" disabled={refreshing} onClick={() => void valueAllWallets().catch(sayError)} />
       </footer>
       {reviewUnpriced && unpriced.length > 0 && <div class="portfolio-unpriced">
         <p class="note">These quantities are held, but have no price. They are excluded from the total and chart.</p>

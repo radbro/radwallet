@@ -242,7 +242,7 @@ function resetPortfolioState(): void {
   valuingWallets.value = false;
 }
 
-test('portfolio state: stale mark during valueAllWallets pricing aborts portfolio and HOME publication', async () => {
+test('portfolio state: stale mark during pricing discards that pass, then a fresh pass publishes', async () => {
   const rpc = await slowPricingRpc();
   const prior = oldHolding();
   resetPortfolioState();
@@ -270,6 +270,10 @@ test('portfolio state: stale mark during valueAllWallets pricing aborts portfoli
     portfolioEth.value = 7;
     usdRate.value = 2000;
 
+    const published: unknown[] = [];
+    const stopWatching = portfolioHoldings.subscribe((holdings) => {
+      if (holdings.length > 0 && holdings[0] !== prior) published.push(holdings);
+    });
     const run = valueAllWallets();
     await timeout(rpc.pricingRequested, 2_000, 'pricing multicall was not requested');
     assert.equal(valuingWallets.value, true);
@@ -278,16 +282,17 @@ test('portfolio state: stale mark during valueAllWallets pricing aborts portfoli
     markPortfolioStale();
     rpc.releasePricing();
     await timeout(run, 2_000, 'valueAllWallets did not finish after pricing released');
+    stopWatching();
 
+    // the stale pass published nothing; the retry is the only publication
+    assert.equal(published.length, 1);
     assert.equal(valuingWallets.value, false);
     assert.equal(walletValueProgress.value, null);
-    assert.equal(portfolioStale.value, true);
-    assert.equal(portfolioUpdatedAt.value, 123);
-    assert.deepEqual(portfolioHoldings.value, [prior]);
-    assert.deepEqual(walletValues.value, { [ADDRESS]: 7 });
-    assert.equal(portfolioEth.value, 7);
-    assert.deepEqual(assetEth.value, { '1:native': 7 });
-    assert.deepEqual(balances.value, [prior]);
+    assert.equal(portfolioStale.value, false);
+    assert.notEqual(portfolioUpdatedAt.value, 123);
+    assert(!portfolioHoldings.value.includes(prior));
+    assert.equal(portfolioHoldings.value.find((h) => h.symbol === 'ETH')?.raw, ONE_ETH);
+    assert.notEqual(walletValues.value[ADDRESS], 7);
     assert.deepEqual(portfolioErrors.value, {});
   } finally {
     rpc.releasePricing();

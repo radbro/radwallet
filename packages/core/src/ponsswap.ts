@@ -16,7 +16,7 @@
  */
 import { encodeFunctionData, erc20Abi, getAddress, type Address } from 'viem';
 import type { DappTxRequest } from './chain.js';
-import { chainClient } from './tokens.js';
+import { chainClient, isContractRefusal } from './tokens.js';
 import {
   PONS_CHAIN_ID, PONS_V2_FACTORY, PONS_NATIVE_QUOTE,
   PONS_CURVE_ABI, PONS_TOKEN_ABI, PONS_FACTORY_ABI,
@@ -81,28 +81,6 @@ interface PonsSwapClient {
 
 function sameAddress(a: string, b: string): boolean {
   return a.toLowerCase() === b.toLowerCase();
-}
-
-/**
- * Did the CONTRACT refuse, or did the NODE? A plain ERC-20 reverts on
- * `launchFactory()` and an EOA returns no data — both are the contract
- * saying "not a Pons token", and null is the right answer. A throttled or
- * unreachable endpoint is neither: viem folds that into the same per-call
- * failure shape under allowFailure, and reading it as "not Pons" would price
- * a launch through the pools it does not have. Measured live: the public
- * Robinhood node answers 429 mid-quote under modest load.
- */
-function isContractRefusal(error: unknown): boolean {
-  let cur: unknown = error;
-  for (let depth = 0; cur && depth < 8; depth++) {
-    const name = (cur as { name?: string }).name ?? '';
-    if (name === 'ContractFunctionRevertedError' || name === 'ContractFunctionZeroDataError'
-      || name === 'RawContractError' || name === 'AbiDecodingZeroDataError') return true;
-    if (name === 'HttpRequestError' || name === 'RpcRequestError' || name === 'TimeoutError'
-      || name === 'LimitExceededRpcError' || name === 'InternalRpcError') return false;
-    cur = (cur as { cause?: unknown }).cause;
-  }
-  return false;
 }
 
 /**

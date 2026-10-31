@@ -2041,6 +2041,126 @@ test('price: transport failure escapes when the caller owns endpoint failover', 
   }
 });
 
+test('price: a rate limit with a JSON-RPC body is the node, not a missing pool', async () => {
+  // viem reads this as RpcRequestError(-32005), not HttpRequestError, so it
+  // used to come back as "no pool" — an unpriced row and no dollar rate
+  const { spotPricesInEth, usdPerEth } = await import('../src/price.js');
+  const server = createServer((_req, res) => {
+    res.writeHead(429, { 'content-type': 'application/json' });
+    res.end('{"jsonrpc":"2.0","id":1,"error":{"code":-32005,"message":"rate limited"}}');
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    const url = `http://127.0.0.1:${address.port}`;
+    await assert.rejects(() => spotPricesInEth(
+      url, 1, [{ address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 }], { throwOnRpcError: true },
+    ));
+    await assert.rejects(() => usdPerEth(url, 1, { throwOnRpcError: true }));
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+  }
+});
+
+test('price: a quoter that reverts still means no pool, not a node failure', async () => {
+  const { spotPricesInEth } = await import('../src/price.js');
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      const answer = (request: { id?: unknown; method: string; params?: unknown[] }) => {
+        let result: unknown = '0x';
+        if (request.method === 'eth_getLogs') result = [];
+        else if (request.method === 'eth_blockNumber') result = '0x1';
+        else if (request.method === 'eth_call') {
+          try {
+            const data = (request.params?.[0] as { data: `0x${string}` }).data;
+            const calls = decodeFunctionData({ abi: multicall3Abi, data }).args[0] as readonly unknown[];
+            result = encodeFunctionResult({
+              abi: multicall3Abi,
+              functionName: 'aggregate3',
+              result: calls.map(() => ({ success: false, returnData: '0x' as const })),
+            });
+          } catch { /* not a multicall: an empty answer */ }
+        }
+        return { jsonrpc: '2.0', id: request.id ?? null, result };
+      };
+      const request = JSON.parse(body);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(Array.isArray(request) ? request.map(answer) : answer(request)));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    const prices = await spotPricesInEth(
+      `http://127.0.0.1:${address.port}`,
+      1,
+      [{ address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 }],
+      { throwOnRpcError: true },
+    );
+    assert.equal(prices.size, 0, 'every tier reverted: unpriced, and no reason to rotate the pool');
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+  }
+});
+
+test('price: a quote call that outgrows the gas cap is split, not read as "no pool"', async () => {
+  // Measured on publicnode and drpc: one call carrying eleven tokens' probes is
+  // refused whole, and every probe in it used to come back as "no pool".
+  const { spotPricesInEth } = await import('../src/price.js');
+  let largest = 0;
+  const server = createServer((req, res) => {
+    let body = '';
+    req.on('data', (chunk) => { body += chunk; });
+    req.on('end', () => {
+      const answer = (request: { id?: unknown; method: string; params?: unknown[] }) => {
+        const id = request.id ?? null;
+        if (request.method !== 'eth_call') return { jsonrpc: '2.0', id, result: '0x' };
+        const data = (request.params?.[0] as { data: `0x${string}` }).data;
+        const calls = decodeFunctionData({ abi: multicall3Abi, data }).args[0] as readonly unknown[];
+        largest = Math.max(largest, calls.length);
+        // this node fits two tokens (eight probes) under its cap, no more
+        if (calls.length > 8) {
+          return { jsonrpc: '2.0', id, error: { code: -32000, message: 'out of gas: gas required exceeds: 50000000' } };
+        }
+        const quote = encodeAbiParameters(
+          [{ type: 'uint256' }, { type: 'uint160' }, { type: 'uint32' }, { type: 'uint256' }],
+          [1_000_000_000_000_000n, 0n, 0, 0n],
+        );
+        return {
+          jsonrpc: '2.0',
+          id,
+          result: encodeFunctionResult({
+            abi: multicall3Abi,
+            functionName: 'aggregate3',
+            result: calls.map(() => ({ success: true, returnData: quote })),
+          }),
+        };
+      };
+      const request = JSON.parse(body);
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify(Array.isArray(request) ? request.map(answer) : answer(request)));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    const tokens = Array.from({ length: 10 }, (_, i) => ({
+      address: `0x${(0xb0 + i).toString(16).padStart(40, '0')}` as `0x${string}`,
+      decimals: 18,
+    }));
+    const prices = await spotPricesInEth(`http://127.0.0.1:${address.port}`, 1, tokens, { throwOnRpcError: true });
+    assert.equal(prices.size, 10, 'every token priced once the refused calls are asked again smaller');
+    assert.ok(largest <= 16, `no call carries more than four tokens (largest: ${largest} probes)`);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((e) => e ? reject(e) : resolve()));
+  }
+});
+
 // ---- Transfer netting for transaction previews --------------------------
 // Canned logs prove each wallet receives its own transfer summary.
 import {

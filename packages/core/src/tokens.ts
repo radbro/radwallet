@@ -39,6 +39,29 @@ export function isRpcTransportError(error: unknown): boolean {
 }
 
 /**
+ * Did the CONTRACT refuse, or did the NODE? A plain ERC-20 reverts on
+ * `launchFactory()` and an EOA returns no data — both are the contract
+ * answering, and "no" is the right reading. A throttled or unreachable
+ * endpoint is neither: viem folds that into the same per-call failure shape
+ * under allowFailure, and a 429 that carries a JSON-RPC body arrives as an
+ * RpcRequestError, not an HttpRequestError, so isRpcTransportError misses it.
+ * Measured live: the public Robinhood node answers 429 mid-quote under
+ * modest load.
+ */
+export function isContractRefusal(error: unknown): boolean {
+  let cur: unknown = error;
+  for (let depth = 0; cur && depth < 8; depth++) {
+    const name = (cur as { name?: string }).name ?? '';
+    if (name === 'ContractFunctionRevertedError' || name === 'ContractFunctionZeroDataError'
+      || name === 'RawContractError' || name === 'AbiDecodingZeroDataError') return true;
+    if (name === 'HttpRequestError' || name === 'RpcRequestError' || name === 'TimeoutError'
+      || name === 'LimitExceededRpcError' || name === 'InternalRpcError') return false;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+/**
  * Native + token balances for one chain, batched where the chain supports it.
  *
  * Every bundled token uses multicall3, so the list can grow to hundreds

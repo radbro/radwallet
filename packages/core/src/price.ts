@@ -14,7 +14,7 @@
  * opt-in feed in pricefeed.ts, and this file stays RPC-only.
  */
 import { encodeFunctionData, decodeFunctionResult, parseUnits, formatEther } from 'viem';
-import { chainClient, isRpcTransportError } from './tokens.js';
+import { chainClient, isContractRefusal } from './tokens.js';
 import { quoteV4Best } from './swapv4.js';
 import { CHAINS, UNISWAP_V3 } from './chains.js';
 
@@ -35,6 +35,28 @@ export const WETH_FOR: Record<number, `0x${string}`> = Object.fromEntries(
 
 /** the fee tiers worth trying, cheapest-to-deepest in practice */
 const FEE_TIERS = [500, 3000, 10_000, 100] as const;
+
+/**
+ * Tokens per quoter eth_call. The whole grid used to go into one multicall,
+ * which viem split only at 16KB of calldata — about 25 tokens a call. Measured
+ * 2026-10-26 on publicnode and drpc: a mainnet call carrying eleven tokens'
+ * probes is refused whole ("out of gas: gas required exceeds: 50000000"), and
+ * allowFailure folds that refusal into every probe, so it read as "no pool"
+ * for all of them: 12 tokens priced 4, and 40 Base tokens priced none. Eight
+ * per call never failed across 200 tokens; four leaves room for heavy pools.
+ */
+const QUOTE_TOKENS_PER_CALL = 4;
+
+/** the node refused the call for its size, not for its rate or its health */
+function isGasCapRefusal(error: unknown): boolean {
+  let cur: unknown = error;
+  for (let depth = 0; cur && typeof cur === 'object' && depth < 8; depth++) {
+    const { details, shortMessage, cause } = cur as { details?: unknown; shortMessage?: unknown; cause?: unknown };
+    if (/out of gas|gas required exceeds/i.test(`${details ?? ''} ${shortMessage ?? ''}`)) return true;
+    cur = cause;
+  }
+  return false;
+}
 
 const quoterAbi = [{
   type: 'function',
@@ -88,8 +110,10 @@ export interface PriceOptions {
  * with a separate eth_call each and stopping at the first that answered, and
  * `valueInEth` called it in a sequential loop. Valuing eight tokens on
  * Robinhood therefore cost up to thirty-two round trips one after another and
- * measured 5.7 seconds. Every one of those calls is independent, so they all
- * go into a single multicall3 — the same trick the swap route search uses.
+ * measured 5.7 seconds. Every one of those calls is independent, so they go
+ * into multicall3 batches — the same trick the swap route search uses — of
+ * QUOTE_TOKENS_PER_CALL tokens each, because one call for everything outgrows
+ * the node's gas cap once a chain holds about ten tokens.
  *
  * It also picks the BEST tier rather than the first that answers, which the
  * per-call version could not do without paying for every tier anyway.
@@ -121,34 +145,63 @@ export async function spotPricesInEth(
   if (!rest.length) return out;
 
   if (quoter) {
-    // every token against every tier, in ONE call. QuoterV2 is not `view`, so
-    // it works by reverting inside the pool callback and catching — which is
-    // fine through multicall3 under eth_call, nothing is committed either way.
-    const probes = rest.flatMap((t) => FEE_TIERS.map((fee) => ({ t, fee })));
-    let res: { status: 'success' | 'failure'; result?: unknown; error?: unknown }[];
-    try {
-      res = (await chainClient(endpoint, chainId).multicall({
-        allowFailure: true,
-        batchSize: 16_384,
-        contracts: probes.map(({ t, fee }) => ({
-          address: quoter,
-          abi: quoterAbi,
-          functionName: 'quoteExactInputSingle',
-          args: [{
-            tokenIn: t.address, tokenOut: weth, amountIn: parseUnits('1', t.decimals),
-            fee, sqrtPriceLimitX96: 0n,
-          }],
-        })) as never,
-      })) as { status: 'success' | 'failure'; result?: unknown; error?: unknown }[];
-    } catch (error) {
-      if (opts.throwOnRpcError) throw error;
-      res = [];
+    // every token against every tier, a few tokens per call. QuoterV2 is not
+    // `view`, so it works by reverting inside the pool callback and catching —
+    // which is fine through multicall3 under eth_call, nothing is committed.
+    type Probe = { t: { address: `0x${string}`; decimals: number }; fee: number };
+    type Result = { status: 'success' | 'failure'; result?: unknown; error?: unknown };
+    const probes: Probe[] = [];
+    const res: Result[] = [];
+    const quoteTokens = async (chunk: typeof rest): Promise<void> => {
+      const mine = chunk.flatMap((t) => FEE_TIERS.map((fee) => ({ t, fee })));
+      let answered: Result[];
+      try {
+        answered = (await chainClient(endpoint, chainId).multicall({
+          allowFailure: true,
+          contracts: mine.map(({ t, fee }) => ({
+            address: quoter,
+            abi: quoterAbi,
+            functionName: 'quoteExactInputSingle',
+            args: [{
+              tokenIn: t.address, tokenOut: weth, amountIn: parseUnits('1', t.decimals),
+              fee, sqrtPriceLimitX96: 0n,
+            }],
+          })) as never,
+        })) as Result[];
+      } catch (error) {
+        if (opts.throwOnRpcError) throw error;
+        answered = [];
+      }
+      // A missing pool makes the quoter revert; anything else is the node.
+      const nodeFailure = answered.find((r) => r.status === 'failure' && !isContractRefusal(r.error));
+      if (nodeFailure && isGasCapRefusal(nodeFailure.error)) {
+        // the call outgrew the node's gas cap: a cost of these pools, not a
+        // fault of the node. Ask again one token at a time; a single token
+        // that still does not fit stays unpriced.
+        if (chunk.length > 1) {
+          for (const t of chunk) await quoteTokens([t]);
+          return;
+        }
+        answered = [];
+      } else if (nodeFailure?.error && opts.throwOnRpcError) {
+        // A throttled node answers with a JSON-RPC error that is no transport
+        // error to viem, and reading it as "no pool" turned rate limits into
+        // unpriced rows and a missing dollar rate instead of the next endpoint.
+        throw nodeFailure.error;
+      }
+      mine.forEach((probe, i) => {
+        probes.push(probe);
+        res.push(answered[i] ?? { status: 'failure' });
+      });
+    };
+    const chunks: Array<typeof rest> = [];
+    for (let i = 0; i < rest.length; i += QUOTE_TOKENS_PER_CALL) {
+      chunks.push(rest.slice(i, i + QUOTE_TOKENS_PER_CALL));
     }
-    if (opts.throwOnRpcError) {
-      const transportFailure = res.find((result) => (
-        result.status === 'failure' && isRpcTransportError(result.error)
-      ));
-      if (transportFailure?.error) throw transportFailure.error;
+    // a few calls at a time, for the same per-origin socket reason as the v4
+    // fallback below
+    for (let start = 0; start < chunks.length; start += 4) {
+      await Promise.all(chunks.slice(start, start + 4).map(quoteTokens));
     }
 
     probes.forEach(({ t, fee }, i) => {

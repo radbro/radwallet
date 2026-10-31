@@ -17,10 +17,10 @@
 import { useEffect, useRef, useState } from 'preact/hooks';
 import {
   openAsset, screen, openSend, swapIntent, prefs, persistPrefs, account,
-  endpointForChain, CHAINS, DEMO,
+  endpointsForChain, CHAINS, DEMO,
 } from '../state.js';
 import {
-  spotPriceInEth, fetchChart, priceFeedSupports, canSwapOn,
+  spotPriceInEth, withFailover, fetchChart, priceFeedSupports, canSwapOn,
   explorerTokenUrl,
   dexChartSupports, dexChartUrl, DEXCHART_HOST, type PricePoint,
 } from '@radwallet/core';
@@ -66,7 +66,8 @@ export function AssetSheet() {
   const box = useRef<HTMLDivElement>(null);
   const close = () => { openAsset.value = null; };
   const [price, setPrice] = useState<string | null>(null);
-  const [priceState, setPriceState] = useState<'looking' | 'none' | 'ok'>('looking');
+  // 'none' is no pool for the token; 'nodes' is no node answering the question
+  const [priceState, setPriceState] = useState<'looking' | 'none' | 'nodes' | 'ok'>('looking');
   const [chart, setChart] = useState<PricePoint[]>([]);
   // the embed is per-sheet: opening an asset must not phone anyone, so this
   // starts false every time unless the always-load switch is on
@@ -95,8 +96,16 @@ export function AssetSheet() {
         return;
       }
       const chain = a.chainId ?? 1;
-      const p = await spotPriceInEth(endpointForChain(chain), chain, a.address, a.decimals)
-        .catch(() => null);
+      // the whole pool, the way HOME priced this row: a node that does not
+      // answer throws and the next is asked, so null means no pool at all
+      let p: Awaited<ReturnType<typeof spotPriceInEth>>;
+      try {
+        p = await withFailover(endpointsForChain(chain), (ep) =>
+          spotPriceInEth(ep, chain, a.address!, a.decimals, { throwOnRpcError: true }));
+      } catch {
+        if (live) setPriceState('nodes');
+        return;
+      }
       if (!live) return;
       setPrice(p?.ethPerToken ?? null);
       setPriceState(p ? 'ok' : 'none');
@@ -162,9 +171,11 @@ export function AssetSheet() {
             {priceState === 'looking' && <div class="note">asking a pool…</div>}
             {priceState === 'none' && (
               <div class="note">
-                no price: no Uniswap pool found for this token, or the node did not
-                answer.
+                no price: no Uniswap pool deep enough to price this token.
               </div>
+            )}
+            {priceState === 'nodes' && (
+              <div class="note">no price: no node on this chain answered. reopen to try again.</div>
             )}
             {priceState === 'ok' && price && (
               <>

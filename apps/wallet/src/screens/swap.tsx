@@ -32,7 +32,7 @@ import { session } from '../session.js';
 import {
   bestEthToRadRouteAcross, quoteSwap, canSwapOn,
   chainInfo, TOKENS, CHAIN_IDS, describeRoute, withFailover, planSwap,
-  chainClient, mergeTrackedTokens, probeToken,
+  chainClient, mergeTrackedTokens, probeToken, isNodeFailure,
   type SwapPlan, type SwapStep,
   quoteKyberSwap, buildKyberSwap, kyberAllowanceFor, validateKyberSwapTx,
   canUseKyberSwap, buildKyberApproveTx, KYBER_HOST, type KyberRouteQuote, type KyberBuiltSwap,
@@ -130,21 +130,31 @@ export function Swap() {
   const lookupContract = useCallback(async (address: `0x${string}`): Promise<PickItem | null> => {
     if (DEMO) throw new Error('demo mode has no chain to check');
     if (!acct) throw new Error('unlock a wallet before checking contracts');
-    return withFailover(endpointsForChain(chain), async (node) => {
-      const found = await probeToken(node, chain, address, acct.address);
-      if (!found) throw new Error('could not read that contract as a token');
-      if (!Number.isInteger(found.token.decimals) || found.token.decimals < 0 || found.token.decimals > 36) {
-        throw new Error('that token reports unsupported decimals');
-      }
-      return {
-        address: found.token.address,
-        symbol: found.token.symbol,
-        name: found.token.name,
-        decimals: found.token.decimals,
-        amount: found.balance.amount,
-        raw: found.balance.raw,
-      };
-    });
+    // a node that does not answer throws and the next is asked; the contract's
+    // own answer — or a bad address — ends the walk on the first node
+    let refused: unknown = null;
+    let found: Awaited<ReturnType<typeof probeToken>>;
+    try {
+      found = await withFailover(endpointsForChain(chain), async (node) => {
+        try { return await probeToken(node, chain, address, acct.address); }
+        catch (e) { if (isNodeFailure(e)) throw e; refused = e; return null; }
+      });
+    } catch {
+      throw new Error(`no node on ${chainInfo(chain).name} answered. try again.`);
+    }
+    if (refused) throw refused;
+    if (!found) throw new Error('could not read that contract as a token');
+    if (!Number.isInteger(found.token.decimals) || found.token.decimals < 0 || found.token.decimals > 36) {
+      throw new Error('that token reports unsupported decimals');
+    }
+    return {
+      address: found.token.address,
+      symbol: found.token.symbol,
+      name: found.token.name,
+      decimals: found.token.decimals,
+      amount: found.balance.amount,
+      raw: found.balance.raw,
+    };
   }, [chain, accountKey]);
 
   /**
@@ -345,11 +355,14 @@ export function Swap() {
           // is kept: "sold out, waiting to graduate" is a different message
           // from "no pool", and the only one worth showing
           let refusal: string | null = null;
+          // did any node get as far as answering? if every one threw, nobody
+          // said "no route" and the message must not either
+          let answered = false;
           const found = await withFailover(endpointsForChain(chain), async (node) => {
             const r = await quoteSwap(
               node, chain, from, to, inRaw, Number(slip), acct?.address,
             );
-            if (!r) throw new Error('no route');
+            if (!r) { answered = true; throw new Error('no route'); }
             return { quote: r, endpoint: node };
           }).catch((e: Error) => {
             const said = e.message.split('last said: ').pop() ?? '';
@@ -359,7 +372,11 @@ export function Swap() {
           if (!current()) return;
           if (await useAggregator(found?.quote.amountOut ?? 0n) || !current()) return;
           if (!found) {
-            setErr(refusal ?? `no route for ${from.symbol} → ${to.symbol} on ${chainInfo(chain).name}, or its nodes did not answer.`);
+            // quoteSwap can still fold a throttled multicall into null, so an
+            // answered "no route" keeps its hedge until it throws instead
+            setErr(refusal ?? (answered
+              ? `no route for ${from.symbol} → ${to.symbol} on ${chainInfo(chain).name}, or its nodes did not answer.`
+              : `no quote: no node on ${chainInfo(chain).name} answered. try again.`));
           } else if (acct) {
             // one place decides what a swap costs in signatures — v3's single
             // approval, or v4's Permit2 pair plus any wrap/unwrap. The deadline

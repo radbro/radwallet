@@ -37,6 +37,12 @@ export interface TxPreview {
   gasWei: bigint;
   ok: boolean;
   error?: string;
+  /**
+   * Why a failed preview failed: 'revert' is the chain's own answer (a revert,
+   * or a sender who cannot afford it) and every node would say the same;
+   * 'node' is one node not answering — "could not look", never "this fails".
+   */
+  failure?: 'revert' | 'node';
 }
 
 /** $RAD — Radcoin, the ecosystem token. Bundled locally, not fetched. */
@@ -94,6 +100,23 @@ export async function radBalance(endpoint: string, address: `0x${string}`): Prom
   };
 }
 
+/**
+ * Did the CHAIN answer "no", or did the NODE fail to answer? viem maps a
+ * revert (RPC code 3, or a node saying "execution reverted") and an
+ * unaffordable transaction onto these errors, wrapped OUTSIDE whatever request
+ * error carried them; a timeout, a 429 or an unsupported method is none of them.
+ */
+function isChainVerdict(error: unknown): boolean {
+  let cur: unknown = error;
+  for (let depth = 0; cur && typeof cur === 'object' && depth < 8; depth++) {
+    const name = (cur as { name?: string }).name ?? '';
+    if (name === 'ExecutionRevertedError' || name === 'ContractFunctionRevertedError'
+      || name === 'RawContractError' || name === 'InsufficientFundsError') return true;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
 /** Simulate a plain ETH transfer locally before anything is signed. */
 export async function previewSend(
   endpoint: string,
@@ -124,6 +147,7 @@ export async function previewSend(
       gasWei: 0n,
       ok: false,
       error: e instanceof Error ? e.message.split('\n')[0] : String(e),
+      failure: isChainVerdict(e) ? 'revert' : 'node',
     };
   }
 }
@@ -210,8 +234,33 @@ export async function previewDappTx(
       gasWei: 0n,
       ok: false,
       error: e instanceof Error ? e.message.split('\n')[0] : String(e),
+      failure: isChainVerdict(e) ? 'revert' : 'node',
     };
   }
+}
+
+/**
+ * previewDappTx across an endpoint pool, first endpoint first. A revert is the
+ * chain's answer and ends the walk, because every node would give it; a node
+ * that did not answer hands the question to the next. Only when no node
+ * answered does the preview fail as 'node'. Simulation is still required —
+ * this changes who is asked, never whether SIGN waits for an answer.
+ */
+export async function previewDappTxAcross(
+  endpoints: string[],
+  from: `0x${string}`,
+  tx: DappTxRequest,
+  chainId = 1,
+): Promise<TxPreview> {
+  let last: TxPreview | null = null;
+  for (const endpoint of endpoints) {
+    const preview = await previewDappTx(endpoint, from, tx, chainId);
+    if (preview.ok || preview.failure === 'revert') return preview;
+    last = preview;
+  }
+  return last ?? {
+    out: [], in_: [], gasEth: '0', gasWei: 0n, ok: false, error: 'no RPC endpoint configured', failure: 'node',
+  };
 }
 
 async function broadcastRawDappTx(

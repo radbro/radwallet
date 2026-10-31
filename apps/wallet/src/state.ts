@@ -29,6 +29,7 @@ import {
   unregisterCustomChain,
   replaceCustomChains,
   probeToken,
+  isNodeFailure,
   probeCollection,
   lookupEns,
   chainClient,
@@ -1616,8 +1617,20 @@ export async function addContract(chainIdIn: number, address: string): Promise<s
     void refresh();
     return `${col.name} added — you hold ${col.count}`;
   }
-  const tok = await probeToken(ep, chainIdIn, address, acct.address);
-  if (!tok) throw new Error('could not read that contract as a token. check the address and network, or try again.');
+  // the pool, not one node: a node that does not answer is asked past, and
+  // only the contract's own answer can say "not a token"
+  let refused: unknown = null;
+  let tok: Awaited<ReturnType<typeof probeToken>>;
+  try {
+    tok = await withFailover(endpointsForChain(chainIdIn), async (node) => {
+      try { return await probeToken(node, chainIdIn, address, acct.address); }
+      catch (e) { if (isNodeFailure(e)) throw e; refused = e; return null; }
+    });
+  } catch {
+    throw new Error(`no node on ${CHAINS[chainIdIn].name} answered. try again.`);
+  }
+  if (refused) throw refused;
+  if (!tok) throw new Error('could not read that contract as a token. check the address and network.');
   const have = customTokens.value[chainIdIn] ?? [];
   if (!have.some((t) => t.address.toLowerCase() === tok.token.address.toLowerCase())) {
     customTokens.value = { ...customTokens.value, [chainIdIn]: [...have, tok.token] };

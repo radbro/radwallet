@@ -86,6 +86,12 @@ async function openApproval(browser, decimals, options = {}) {
     if (url.pathname.endsWith('-rpc')) {
       const body = route.request().postDataJSON();
       rpc.push({ url: url.href, ...body });
+      // a throttled node: the request's own endpoint, or (allDown) every one.
+      // Read at call time, so a scenario can bring the nodes back mid-test.
+      if (options.allDown || (options.requestDown && url.pathname === '/request-rpc')) {
+        await route.fulfill({ status: 429, contentType: 'text/plain', body: 'too many requests' });
+        return;
+      }
       let result;
       let error;
       if (body.method === 'eth_call' && body.params[0].data === '0x313ce567') {
@@ -174,6 +180,39 @@ async function waitEnabled(page, button) {
         && call.params[0].value === '0x1'), 'ordinary exact value must be simulated on the approval endpoint');
       console.log('PASS ordinary approval: exact native value, request endpoint, no allowance metadata dependency');
     } finally { await ordinary.close(); }
+
+    // one node throttled: the simulation is handed to the next node in the
+    // chain's pool instead of reading as a failed transaction
+    const failover = await openApproval(browser, 6, {
+      finite: true, requestDown: true, transaction: { from: owner, to: spender, value: '0x1', data: '0x' },
+    });
+    try {
+      await waitEnabled(failover.page, failover.sign);
+      assert.ok(failover.rpc.some((call) => call.method === 'eth_call' && call.url.endsWith('/approval-pool-rpc')),
+        'a throttled request endpoint must hand the simulation to the pool');
+      const body = await failover.page.textContent('.content');
+      assert.equal(body.includes('NO NODE ANSWERED') || body.includes('SIMULATION FAILED'), false,
+        'a node the pool got past must leave no warning behind');
+      console.log('PASS simulation failover: a throttled node hands the preview to the next pool endpoint');
+    } finally { await failover.close(); }
+
+    // every node down: say THAT, keep SIGN off, and let TRY AGAIN recover
+    const outageOptions = {
+      finite: true, allDown: true, transaction: { from: owner, to: spender, value: '0x1', data: '0x' },
+    };
+    const outage = await openApproval(browser, 6, outageOptions);
+    try {
+      await outage.page.getByText('NO NODE ANSWERED THE SIMULATION.').waitFor();
+      assert.equal(await outage.sign.isEnabled(), false, 'SIGN must stay off when no node answered');
+      assert.equal((await outage.page.textContent('.content')).includes('SIMULATION FAILED'), false,
+        'a node outage must not read as a failed transaction');
+      outageOptions.allDown = false;
+      await outage.page.getByRole('button', { name: 'TRY AGAIN', exact: true }).click();
+      await waitEnabled(outage.page, outage.sign);
+      assert.equal((await outage.page.textContent('.content')).includes('NO NODE ANSWERED'), false,
+        'a recovered simulation must clear the outage panel');
+      console.log('PASS simulation outage: named as no node answering, SIGN stays off, TRY AGAIN recovers');
+    } finally { await outage.close(); }
 
     const finite = await openApproval(browser, 6, { finite: true, requestedAmount: 123_456_789n });
     try {

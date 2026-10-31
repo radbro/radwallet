@@ -331,9 +331,10 @@ async function stopExtensionWorker(ctx, pg, extId) {
   // three honest outcomes, and a green run must say which one it saw
   console.log('    WHAT MOVES:', body6a.includes('WHAT MOVES')
     ? JSON.stringify((body6a.match(/WHAT MOVES(.{0,58})/) || [])[1])
-    : body6a.includes('cannot simulate') ? '(no endpoint in the pool can simulate)'
+    : body6a.includes('could not preview asset changes') ? '(no endpoint in the pool could preview transfers)'
       : body6a.includes('SIMULATION FAILED') ? '(the call itself reverted)'
-        : '(nothing rendered — that is a bug)');
+        : body6a.includes('NO NODE ANSWERED THE SIMULATION') ? '(no node in the pool answered)'
+          : '(nothing rendered — that is a bug)');
   const switchDuringApproval = await dapp.evaluate(() =>
     window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x2105' }] })
       .then(() => 'OK').catch((e) => `ERR:${e.code}:${e.message}`));

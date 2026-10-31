@@ -62,6 +62,24 @@ export function isContractRefusal(error: unknown): boolean {
 }
 
 /**
+ * The NODE failed, positively identified — the other half of the question
+ * above, for callers where an unrecognised failure must stay the contract's
+ * answer. A token whose symbol() is bytes32 fails to DECODE as a string, and
+ * that is the contract answering oddly, not the node going away; only a
+ * transport error or a JSON-RPC error from the node itself counts here.
+ */
+export function isNodeFailure(error: unknown): boolean {
+  let cur: unknown = error;
+  for (let depth = 0; cur && typeof cur === 'object' && depth < 8; depth++) {
+    const name = (cur as { name?: string }).name ?? '';
+    if (/Revert|ZeroData|^RawContractError$|^AbiDecoding/.test(name)) return false;
+    if (name === 'HttpRequestError' || name === 'TimeoutError' || /RpcError$/.test(name)) return true;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+/**
  * Native + token balances for one chain, batched where the chain supports it.
  *
  * Every bundled token uses multicall3, so the list can grow to hundreds
@@ -342,6 +360,10 @@ export async function probeToken(
     { address: addr, abi: erc20Abi, functionName: 'decimals' },
     { address: addr, abi: erc20Abi, functionName: 'balanceOf', args: [owner] },
   ]);
+  // a node that did not answer is not a contract that refused: throw, so the
+  // caller's pool asks the next node instead of reporting "not a token"
+  const nodeDown = [sym, name, dec, bal].find((r) => r.status === 'failure' && isNodeFailure(r.error));
+  if (nodeDown?.status === 'failure') throw nodeDown.error;
   if (sym.status !== 'success' || dec.status !== 'success' || bal.status !== 'success') return null;
   const decimals = Number(dec.result);
   const raw = bal.result as bigint;

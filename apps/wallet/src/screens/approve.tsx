@@ -8,12 +8,12 @@
 import { useEffect, useState } from 'preact/hooks';
 import { erc20Abi, formatUnits } from 'viem';
 import {
-  account, accounts, groups, endpoint, say, DEMO, chainId, simulateMoves,
+  account, accounts, groups, endpoint, say, DEMO, chainId, simulateMoves, endpointsForChain,
 } from '../state.js';
 import type { SimResult } from '@radwallet/core';
 import type { ApprovalRequest, ApprovalOverride } from '../approval-types.js';
 import {
-  previewDappTx,
+  previewDappTxAcross,
   demoPreviewSend,
   decodeApprove,
   isUnlimitedAllowance,
@@ -64,6 +64,8 @@ export function Approve() {
     decimals: number | null;
   } | null>(null);
   const [previewFor, setPreviewFor] = useState<string | null>(null);
+  // bumped by TRY AGAIN after no node answered the simulation
+  const [previewTry, setPreviewTry] = useState(0);
   const [rewriteAmt, setRewriteAmt] = useState('100');
   const [signUnlimited, setSignUnlimited] = useState(false);
   const [working, setWorking] = useState(false);
@@ -154,7 +156,12 @@ export function Approve() {
     void (async () => {
       const p = DEMO
         ? await demoPreviewSend(previewTx.to ?? '0x????', '0')
-        : await previewDappTx(approvalEndpoint, signer.address, previewTx, approvalChainId);
+        // the request's own endpoint first, then the rest of that chain's pool:
+        // one node that does not answer must not read as "this would fail"
+        : await previewDappTxAcross(
+          [approvalEndpoint, ...endpointsForChain(approvalChainId).filter((e) => e !== approvalEndpoint)],
+          signer.address, previewTx, approvalChainId,
+        );
       if (alive) { setPrev(p); setPreviewFor(previewKey); }
     })();
     // the asset changes are a second, independent question: a node that cannot
@@ -166,7 +173,7 @@ export function Approve() {
       })();
     }
     return () => { alive = false; };
-  }, [req, signer, previewKey]);
+  }, [req, signer, previewKey, previewTry]);
 
   if (!req) {
     return (
@@ -263,11 +270,21 @@ export function Approve() {
           THIS CONTRACT WANTS<br />{approveCall.amount === MAX_UINT256 ? 'UNLIMITED ALLOWANCE' : 'A VERY LARGE SPENDING LIMIT'}
         </div>
       )}
-      {isTx && prev && !prev.ok && (
+      {isTx && prev && !prev.ok && prev.failure === 'node' && (
+        <div class="obey badver" style={{ fontSize: 13 }}>
+          NO NODE ANSWERED THE SIMULATION.
+          <br />
+          <span style={{ fontSize: 10, fontWeight: 'normal' }}>{prev.error} SIGN stays off until one does.</span>
+          <button class="btn ghost block" style={{ marginTop: 8 }} onClick={() => setPreviewTry((n) => n + 1)}>
+            TRY AGAIN
+          </button>
+        </div>
+      )}
+      {isTx && prev && !prev.ok && prev.failure !== 'node' && (
         <div class="obey badver" style={{ fontSize: 13 }}>
           SIMULATION FAILED: {prev.error}
           <br />
-          <span style={{ fontSize: 10, fontWeight: 'normal' }}>it would revert, or the node did not answer. SIGN stays off: REFUSE, then retry from the site.</span>
+          <span style={{ fontSize: 10, fontWeight: 'normal' }}>it would revert. SIGN stays off: REFUSE.</span>
         </div>
       )}
 
@@ -430,7 +447,7 @@ export function Approve() {
           ))}
           <div class="simrow"><span class="dir">EST. GAS</span><span class="what">{prev.gasEth} {CHAINS[approvalChainId]?.nativeSymbol ?? 'ETH'}</span></div>
           <div class="note">{DEMO ? 'Demo preview. No RPC request was made.'
-            : 'Checked using your selected RPC provider. Results may change before confirmation.'}</div>
+            : 'Checked on your own RPC pool. Results may change before confirmation.'}</div>
         </div>
       )}
 

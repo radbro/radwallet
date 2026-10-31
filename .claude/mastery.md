@@ -62,6 +62,15 @@ and third-party behavior before changing an integration.
 - A node failure inside the balance multicall must throw, so the pool moves
   on. Some nodes answer `eth_getBalance` and refuse `eth_call`. A token that
   reverts is the token answering: drop it, do not rotate.
+- Two classifiers, two defaults. `isContractRefusal` defaults to "the node
+  failed", so the sweep and the quoter rotate on anything unknown.
+  `isNodeFailure` defaults to "the contract answered", so a bytes32
+  `symbol()` (MKR) stays "not a token" instead of walking the pool.
+- The approval simulation walks the pool (`previewDappTxAcross`). A revert or
+  an unaffordable send is the chain's answer and ends the walk. Only "no node
+  answered" offers TRY AGAIN. SIGN waits in both cases.
+- The app sets `--ui-layout-width` in a `resize` listener. A test that
+  measures right after a viewport change must wait for that listener.
 
 ## Privacy and evidence
 

@@ -1,7 +1,7 @@
 [
   {
     "path": ".claude/mastery.md",
-    "sha256": "9f741faa89a2a14d21b9b0147fb3f75d976650d5ba5f82a9edbf6f218e9a90e1"
+    "sha256": "41f16dad511b1d63c9d4cde072b99483ccf03a76ffcaa573f6f7c87e2f1d9113"
   },
   {
     "path": ".github/workflows/ci.yml",
@@ -369,11 +369,11 @@
   },
   {
     "path": "apps/wallet/src/screens/approve.tsx",
-    "sha256": "d7f3b3397b98f944017f8a3fb2d59a8d577728f1824ee14edb2074b789f7d444"
+    "sha256": "172bb291cdd7b519710f7cd2b6c9f6656547a7ef30bf41007f6983a3bacf7690"
   },
   {
     "path": "apps/wallet/src/screens/asset.tsx",
-    "sha256": "49db45709f24a37e2123eb8573533ed95f9f73e7d4a747bc4d454cd196c23bb8"
+    "sha256": "82f531336ac16ed1d9a45b8048cc5f25c93109f608e3f69324bf1d3cd8058923"
   },
   {
     "path": "apps/wallet/src/screens/home.tsx",
@@ -413,7 +413,7 @@
   },
   {
     "path": "apps/wallet/src/screens/swap.tsx",
-    "sha256": "b0d9ead6106b598061b66ee45df910635b1c2478a11ba5cab4c8a7067c7ff2bb"
+    "sha256": "ae107127fdaa7d091f99b8ec4512b8eed81a36175b818037d4686ef5f723c3ba"
   },
   {
     "path": "apps/wallet/src/screens/tokenlist.tsx",
@@ -441,7 +441,7 @@
   },
   {
     "path": "apps/wallet/src/state.ts",
-    "sha256": "ad8bf1bcd820d00c8787663e5cda803e7d035fe04ec43f88df79e9e6355abccd"
+    "sha256": "554773c498839d5028d5d1e083549e488cdde9a275138eab18fb4322b6ecb2a6"
   },
   {
     "path": "apps/wallet/src/storage.ts",
@@ -708,24 +708,24 @@
     "sha256": "aebe5049ad530c04b76bf4b0128723c276aba8a77d69bd0cb475a06040b742ec"
   },
   {
-    "path": "docs/assets/ccip-B_PP7AWp.js",
-    "sha256": "17b55e9b04eff02583c330aa944fd03a1898323c203676dc792180d7c10b5c00"
+    "path": "docs/assets/ccip-DK_53KQK.js",
+    "sha256": "aa7b4b9efdb532ac2ed4d2086c0e41ed51f7f25bcf9c0ba8f7861015c59a6237"
   },
   {
     "path": "docs/assets/index-CR1dBIzw.css",
     "sha256": "b4c7fbc3b85896dbfc8be64b74e20b1f35c744ae176e26b396f6523ca86b895c"
   },
   {
-    "path": "docs/assets/index-DKZ80kAz.js",
-    "sha256": "be5d15691c377ff38c5ee2bcd05ab8f5896ddb8756cf2f4b81699b633b1fcfa5"
+    "path": "docs/assets/index-DX4cDydL.js",
+    "sha256": "c65f9858bde0d53db97daf8c6b6b65b93dcce1d265febb873e5024f651ba50ca"
   },
   {
-    "path": "docs/assets/web-BOpyJJXi.js",
-    "sha256": "1eff516ec22e24fb9e31b9236f5ad4f9c08392259f871b2eaed5c60f60720d38"
+    "path": "docs/assets/web-BM96iKu_.js",
+    "sha256": "bd67d0c23922166b81a4354fd6fc872f48b29c45a29273b62b4f414b8f189589"
   },
   {
-    "path": "docs/assets/web-DPSwt9BK.js",
-    "sha256": "861549c42ce872b1c6c2d0bd74a9d0cf36b638b98785f4bdb562f09012eb37c6"
+    "path": "docs/assets/web-DR5T5pgj.js",
+    "sha256": "09bce59d337af642804cd8beb9f427fe0882238c452844ea29b07cd1cc868fd6"
   },
   {
     "path": "docs/demo/icons/icon-192.png",
@@ -737,7 +737,7 @@
   },
   {
     "path": "docs/demo/index.html",
-    "sha256": "e1628c5cb919c862a6ea7b23ef1bc4aed9bc84f66de380c472bae3c3e2445d35"
+    "sha256": "12469252cd17ba37d57c6e6fd8c852e549178a357e24445626b0572224c52285"
   },
   {
     "path": "docs/demo/manifest.webmanifest",
@@ -757,7 +757,7 @@
   },
   {
     "path": "docs/index.html",
-    "sha256": "c917d10e48386e531523c590990738e4f48b02664f168417ec558f8ac0e0635c"
+    "sha256": "a4c7f0ab7820cdc6c681addbb6754cda3f11a5e4ff60f498ac522909c5579bae"
   },
   {
     "path": "docs/manifest.webmanifest",
@@ -793,7 +793,7 @@
   },
   {
     "path": "packages/core/src/chain.ts",
-    "sha256": "825cb18837e5e5419383d5c2f7c3d8ba2731367473d006c9337aa5dec2dccbbe"
+    "sha256": "9a056d7a69d1ffd609b1442490dea9adf24c4f6ec7dca683b4bf75308bc52ac7"
   },
   {
     "path": "packages/core/src/chains.ts",
@@ -885,7 +885,7 @@
   },
   {
     "path": "packages/core/src/tokens.ts",
-    "sha256": "8622570c15d2ae996417b8b008a9922bfd4f44c0629462d14f0d01266e4d9e83"
+    "sha256": "060e6364e37bfe6745494fecb2eb2ccc50d76e3b6568ecec5af33ebbc560dff1"
   },
   {
     "path": "packages/core/src/transfers.ts",
@@ -922,6 +922,14 @@
   {
     "path": "packages/core/test/portfolio.test.ts",
     "sha256": "1f5d6d681b9dca9ee2b44caad9d16295efcc591fdc600632737428331f8b1d24"
+  },
+  {
+    "path": "packages/core/test/preview.test.ts",
+    "sha256": "a0febb0a55d4a16cbd3b595ef3bf37671884cfe170b9ae250038401ce3584f59"
+  },
+  {
+    "path": "packages/core/test/probe.test.ts",
+    "sha256": "c1bc7a6233e301506d2775cdf7ccc6dbe531c86c7bad310d218c94d752dbc125"
   },
   {
     "path": "packages/core/test/quantities.test.ts",
@@ -1041,7 +1049,7 @@
   },
   {
     "path": "scripts/e2e/allowance.e2e.cjs",
-    "sha256": "54a463af2501e1dece8fcd9d3a203e1d4179eb05cbf1d2d2e656e4dc0770e5ab"
+    "sha256": "04c585305aafd35e9b668bfdf393dd9772fd31e07264d4407d976c7800d77f34"
   },
   {
     "path": "scripts/e2e/amounts.e2e.mjs",
@@ -1069,7 +1077,7 @@
   },
   {
     "path": "scripts/e2e/extension.e2e.cjs",
-    "sha256": "097815d89756aac7f5d198d13299de04d95e553e21982e7007deda94b37aa020"
+    "sha256": "142315953bf91ca10ebb661f6e23c2179527f7c723d2568244ab4c355111a3a1"
   },
   {
     "path": "scripts/e2e/firefox.e2e.cjs",
@@ -1113,7 +1121,7 @@
   },
   {
     "path": "scripts/e2e/swap.e2e.cjs",
-    "sha256": "18d9fc51f5dbbd8ced77ced24fd9df3ed90bfafac36d7b2c97797b4924b1817f"
+    "sha256": "5d0ef0915101163740f5d1449d0f8cd0a900627baaa367fcb117181da7269676"
   },
   {
     "path": "scripts/e2e/wallet-list.e2e.cjs",

@@ -789,6 +789,16 @@ async function waitForRoute(page, text, timeout = 15_000) {
 async function assertReviewLayout(page) {
   const review = page.locator('.swapreview');
   await review.waitFor({ state: 'visible', timeout: 10_000 });
+  // The app sizes itself in a resize listener (--ui-layout-width, app.tsx), so a
+  // measurement taken straight after setViewportSize can still see the old,
+  // wider layout. Wait for the listener — not for the overflow to go away.
+  await page.waitForFunction(() => {
+    const root = document.documentElement;
+    const style = getComputedStyle(root);
+    const zoom = parseFloat(style.getPropertyValue('--ui-zoom')) || 1;
+    const width = parseFloat(style.getPropertyValue('--ui-layout-width')) * zoom;
+    return Math.abs(width - Math.min(root.clientWidth, 430)) < 1;
+  }, null, { timeout: 5_000 });
   const overflow = await review.evaluate((el) => ({
     scrollWidth: el.scrollWidth,
     clientWidth: el.clientWidth,

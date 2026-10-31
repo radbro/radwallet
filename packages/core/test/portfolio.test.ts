@@ -177,3 +177,31 @@ test('portfolio: an asset is unpriced if any positive holding lacks a price', ()
   assert.equal(view.unpricedAssetCount, 1);
   assert.equal(view.rows[0].unpriced, 1);
 });
+
+test('portfolio: the wallets inside a row rank by what they hold, unpriced last', () => {
+  const a = account(A, 0);
+  const b = account(B, 1, 'seed-2');
+  const c = account('0x00000000000000000000000000000000000000c3', 2);
+  // Sweep order is a, b, c; the balances say otherwise.
+  const holdings = [
+    holding(a, 1, 'RAD', 0.1, 10n, C1),
+    holding(b, 1, 'RAD', 0.5, 50n, C1),
+    holding(c, 1, 'RAD', 0.2, 20n, C1),
+    holding(a, 1, 'ETH', 2),
+    holding(a, 1, 'DUST', null, 999n, C2),
+  ];
+
+  const assets = buildPortfolioView(holdings, [a, b, c], noFilters, 'assets');
+  const rad = assets.rows.find((r) => r.id === portfolioAssetId(1, C1))!;
+  assert.deepEqual(rad.holdings.map((h) => h.walletAddress), [B, '0x00000000000000000000000000000000000000c3', A]);
+
+  // One asset nobody can price still ranks its wallets by quantity.
+  const unpriced = buildPortfolioView(holdings.map((h) => ({ ...h, ethValue: null })), [a, b, c], noFilters, 'assets');
+  const radUnpriced = unpriced.rows.find((r) => r.id === portfolioAssetId(1, C1))!;
+  assert.deepEqual(radUnpriced.holdings.map((h) => h.walletAddress), [B, '0x00000000000000000000000000000000000000c3', A]);
+
+  // Inside a wallet the assets rank by value and the unpriced quantity goes last, however large.
+  const wallets = buildPortfolioView(holdings, [a, b, c], noFilters, 'wallets');
+  const walletA = wallets.rows.find((r) => r.id === A.toLowerCase())!;
+  assert.deepEqual(walletA.holdings.map((h) => h.symbol), ['ETH', 'RAD', 'DUST']);
+});

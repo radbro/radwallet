@@ -200,6 +200,36 @@ async function assertPortfolioGroupingAndDetails(pg, label) {
     `${label}: detail rows do not show quantity-shaped asset amounts: ${JSON.stringify(details)}`);
   assert(details.every((row) => /^(Unpriced|—|[$0-9.,<]+\s*(ETH)?)$/i.test(row.contribution)),
     `${label}: detail rows do not show numeric contribution values: ${JSON.stringify(details)}`);
+  await assertAssetWalletsRankByBalance(pg, label);
+}
+
+// Under the Assets grouping an expanded row lists one wallet per line, and the
+// wallet holding the most of that asset has to be on top: the row is what you
+// open to answer "which wallet has my RAD", and sweep order does not answer it.
+async function assertAssetWalletsRankByBalance(pg, label) {
+  await pg.locator('.portfolio-grouping button', { hasText: 'Assets' }).click();
+  await pg.waitForTimeout(200);
+  const rows = pg.locator('.portfolio-row-toggle');
+  const count = await rows.count();
+  let checked = 0;
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+    if (await row.getAttribute('aria-expanded') !== 'true') await row.click();
+    await pg.waitForTimeout(100);
+    const amounts = await pg.locator('.portfolio-row-detail .portfolio-detail-row > div > span:last-child')
+      .evaluateAll((spans) => spans.map((span) => parseFloat((span.textContent || '').replace(/[<,]/g, ''))));
+    assert(amounts.length > 0 && amounts.every((n) => Number.isFinite(n)),
+      `${label}: asset detail rows carry no parseable quantity: ${JSON.stringify(amounts)}`);
+    for (let j = 1; j < amounts.length; j++) {
+      assert(amounts[j] <= amounts[j - 1],
+        `${label}: wallets under asset row ${i} are not ranked by balance: ${JSON.stringify(amounts)}`);
+    }
+    if (amounts.length > 1) checked++;
+    await row.click();
+    await pg.waitForTimeout(100);
+  }
+  assert(checked > 0, `${label}: no asset row listed more than one wallet, so the ranking was never exercised`);
+  console.log(`PORTFOLIO ASSET WALLETS RANKED BY BALANCE: ${checked} rows`);
 }
 
 async function resetPortfolioFilters(pg) {

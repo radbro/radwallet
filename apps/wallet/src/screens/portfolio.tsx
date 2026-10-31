@@ -92,8 +92,11 @@ function RowDetail({ row, grouping }: { row: PortfolioRow; grouping: PortfolioGr
       const key = holding.walletAddress.toLowerCase();
       wallets.set(key, [...(wallets.get(key) ?? []), holding]);
     }
+    // Holdings arrive value-descending; the wallets are ranked by what they hold in total.
+    const walletValue = (holdings: PortfolioHolding[]) => holdings.reduce((sum, h) => sum + (h.ethValue !== null && Number.isFinite(h.ethValue) && h.ethValue > 0 ? h.ethValue : 0), 0);
+    const ranked = [...wallets].sort(([, a], [, b]) => walletValue(b) - walletValue(a));
     return <div class="portfolio-row-detail">
-      {[...wallets].map(([address, holdings]) => <div class="portfolio-group-detail" key={address}>
+      {ranked.map(([address, holdings]) => <div class="portfolio-group-detail" key={address}>
         <div class="portfolio-detail-heading"><b>{holdings[0].walletLabel}</b><span>{short(address)}</span></div>
         {holdings.map((holding) => <HoldingDetail key={keyOf(holding)} holding={holding} showWallet={false} />)}
       </div>)}

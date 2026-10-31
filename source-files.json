@@ -393,7 +393,7 @@
   },
   {
     "path": "apps/wallet/src/screens/portfolio.tsx",
-    "sha256": "e0c2ac2ba079e70959ace0af7b14541e27b628ed3c7963f9873e8d27975c02a2"
+    "sha256": "c3cb09cf7602865a750839fa348886f038916178bc167101a95ebfc0990bee5c"
   },
   {
     "path": "apps/wallet/src/screens/receive.tsx",
@@ -704,24 +704,24 @@
     "sha256": "aebe5049ad530c04b76bf4b0128723c276aba8a77d69bd0cb475a06040b742ec"
   },
   {
-    "path": "docs/assets/ccip-mhXZAA2V.js",
-    "sha256": "f6c7f80b5e7e111428787dbc5a0bc1042e9d140bc0b6795119530bf210fd35af"
+    "path": "docs/assets/ccip-BB-KOHzG.js",
+    "sha256": "be84a4852a288ea020b1cdeb2f95677325633f5f21a4d689a2998e048adafd72"
   },
   {
     "path": "docs/assets/index-B71C9s6t.css",
     "sha256": "c51b4804b60e6c5db03d29d787e9df7ace6b52d67b9c44cd0ee8c3bae53d3c59"
   },
   {
-    "path": "docs/assets/index-cUWD5ZOj.js",
-    "sha256": "64f6d709535937c6e50b7f7d5eca35288dc98cbb7bfa2d8281a421bf5fd57f7f"
+    "path": "docs/assets/index-CRVcl_rH.js",
+    "sha256": "ea7a9e49d7780e9fa8d6840e25c4fbd8e8ad34c57450470fcb3973031788c382"
   },
   {
-    "path": "docs/assets/web-BWoFOFwT.js",
-    "sha256": "2c2f28eba5d0a3379ad48ac1bd7cd7c91cb2afc846498421ba7441f4e18e2724"
+    "path": "docs/assets/web-CjwsGJHk.js",
+    "sha256": "a501f8a3def8223b5bcf848a6ae10339863d7be09d5c16a5dc14c6947e6c6d82"
   },
   {
-    "path": "docs/assets/web-oqWKpX_c.js",
-    "sha256": "dce374add5d4fe0146ee2ca49fd0eb2b194b3796340c0c41d5a8f0d94b72ba41"
+    "path": "docs/assets/web-JIGmJ95k.js",
+    "sha256": "f0cd1ef9aee01784a14ef8bcfa34fdcddc1e5243ab248a7d4e1dc14109fd5637"
   },
   {
     "path": "docs/demo/icons/icon-192.png",
@@ -733,7 +733,7 @@
   },
   {
     "path": "docs/demo/index.html",
-    "sha256": "857145f994a8f87f34691776ca60e988b98e608f991483993a559f7feea9efd8"
+    "sha256": "16783cab64b09ad63f871c7a765d9edd543c8cf5ba661915e27289be2c235f6c"
   },
   {
     "path": "docs/demo/manifest.webmanifest",
@@ -753,7 +753,7 @@
   },
   {
     "path": "docs/index.html",
-    "sha256": "b2e3ec428ff17f450bf5ba7c1b6ab4e8a6e0eb66524fb329c540febdb9e49259"
+    "sha256": "910907e51d93241c2b68606662dda9cb4bd90767c2c1317b5838b6ddd0f8f85d"
   },
   {
     "path": "docs/manifest.webmanifest",
@@ -833,7 +833,7 @@
   },
   {
     "path": "packages/core/src/portfolio.ts",
-    "sha256": "0efb98cf24f0ad7f04427ef28d17869b76f98ef8d207b5f500d0d416b42a75e8"
+    "sha256": "71f1f9e1017bd7da301d10de3112e7cb809f64368c97c6dbc9497423f1d052c2"
   },
   {
     "path": "packages/core/src/price.ts",
@@ -917,7 +917,7 @@
   },
   {
     "path": "packages/core/test/portfolio.test.ts",
-    "sha256": "6e990a5a065ed3a4f567e101564f57f1e99d491d5480f2de5f5ad9eae1659a57"
+    "sha256": "1f5d6d681b9dca9ee2b44caad9d16295efcc591fdc600632737428331f8b1d24"
   },
   {
     "path": "packages/core/test/quantities.test.ts",
@@ -1093,7 +1093,7 @@
   },
   {
     "path": "scripts/e2e/portfolio-helpers.cjs",
-    "sha256": "2768899430a3c513b8cb146dae208fa03a89ff7552ac7bfa12efb96e6e9519ac"
+    "sha256": "2c525ce65c51f010bfc8b00b85498b1e413f9aeaefcb7093a4ea6b91d03a8bca"
   },
   {
     "path": "scripts/e2e/pwa.e2e.cjs",

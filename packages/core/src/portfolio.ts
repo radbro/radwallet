@@ -96,7 +96,24 @@ function rowSubtitle(grouping: PortfolioGrouping, holdings: PortfolioHolding[]):
   return `${assets} asset${assets === 1 ? '' : 's'}`;
 }
 
-function makeRow(grouping: PortfolioGrouping, id: string, holdings: PortfolioHolding[]): PortfolioRow {
+/**
+ * Order the holdings inside one row the way the rows themselves are ordered:
+ * biggest first. Under the assets grouping every holding is the SAME asset,
+ * so the quantity is the honest key — it ranks the wallets even when nothing
+ * is priced. Across different assets only a priced value compares, and an
+ * unpriced holding goes below every priced one.
+ */
+export function compareHoldings(a: PortfolioHolding, b: PortfolioHolding): number {
+  if (priced(a) !== priced(b)) return priced(a) ? -1 : 1;
+  const byValue = valueOf(b) - valueOf(a);
+  if (byValue !== 0) return byValue;
+  const sameAsset = portfolioAssetId(a.chainId ?? 1, a.address) === portfolioAssetId(b.chainId ?? 1, b.address);
+  if (sameAsset && a.raw !== b.raw) return a.raw > b.raw ? -1 : 1;
+  return a.symbol.localeCompare(b.symbol) || a.walletLabel.localeCompare(b.walletLabel);
+}
+
+function makeRow(grouping: PortfolioGrouping, id: string, rowHoldings: PortfolioHolding[]): PortfolioRow {
+  const holdings = [...rowHoldings].sort(compareHoldings);
   const first = holdings[0];
   const ethValue = holdings.reduce((total, h) => total + valueOf(h), 0);
   const hasValue = holdings.some(priced);
